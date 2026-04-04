@@ -1,0 +1,35 @@
+gobert2/
+├── src/
+│   ├── components/
+│   │   ├── Auth/
+│   │   │   └── Login.tsx
+│   │   ├── Layout/
+│   │   │   ├── Sidebar.tsx
+│   │   │   ├── Header.tsx
+│   │   │   └── Layout.tsx
+│   │   ├── Dashboard/
+│   │   │   ├── Resumen.tsx
+│   │   │   ├── Inventario.tsx
+│   │   │   └── AgregarEquipo.tsx
+│   │   ├── Common/
+│   │   │   ├── Modal.tsx
+│   │   │   └── Notification.tsx
+│   │   └── UI/
+│   │       ├── StatCard.tsx
+│   │       └── Badge.tsx
+│   ├── context/
+│   │   └── AuthContext.tsx
+│   ├── hooks/
+│   │   └── useEquipos.ts
+│   ├── services/
+│   │   └── api.ts
+│   ├── types/
+│   │   └── index.ts
+│   ├── App.tsx
+│   ├── App.css
+│   ├── main.tsx
+│   └── index.css
+├── index.html
+├── package.json
+├── vite.config.ts
+└── tsconfig.json
