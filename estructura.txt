@@ -1,35 +1,59 @@
-gobert2/
-├── src/
-│   ├── components/
-│   │   ├── Auth/
-│   │   │   └── Login.tsx
-│   │   ├── Layout/
-│   │   │   ├── Sidebar.tsx
-│   │   │   ├── Header.tsx
-│   │   │   └── Layout.tsx
-│   │   ├── Dashboard/
-│   │   │   ├── Resumen.tsx
-│   │   │   ├── Inventario.tsx
-│   │   │   └── AgregarEquipo.tsx
-│   │   ├── Common/
-│   │   │   ├── Modal.tsx
-│   │   │   └── Notification.tsx
-│   │   └── UI/
-│   │       ├── StatCard.tsx
-│   │       └── Badge.tsx
-│   ├── context/
-│   │   └── AuthContext.tsx
-│   ├── hooks/
-│   │   └── useEquipos.ts
-│   ├── services/
-│   │   └── api.ts
-│   ├── types/
-│   │   └── index.ts
-│   ├── App.tsx
-│   ├── App.css
-│   ├── main.tsx
-│   └── index.css
-├── index.html
-├── package.json
-├── vite.config.ts
-└── tsconfig.json
+inventario-app/
+├── backend/
+│   ├── manage.py
+│   ├── inventario/
+│   │   ├── settings.py
+│   │   ├── urls.py
+│   │   └── wsgi.py
+│   ├── api/
+│   │   ├── models.py
+│   │   ├── views.py
+│   │   ├── serializers.py
+│   │   └── urls.py
+│   └── requirements.txt
+└── frontend/
+    ├── package.json
+    ├── src/
+    │   ├── App.jsx
+    │   ├── main.jsx
+    │   ├── index.css
+    │   ├── components/
+    │   │   ├── Login.jsx
+    │   │   ├── Dashboard.jsx
+    │   │   ├── Sidebar.jsx
+    │   │   ├── Header.jsx
+    │   │   ├── Resumen.jsx
+    │   │   ├── Inventario.jsx
+    │   │   ├── AgregarEquipo.jsx
+    │   │   ├── ModalEditar.jsx
+    │   │   └── Notification.jsx
+    │   └── services/
+    │       └── api.js
+    └── vite.config.js
+
+
+
+
+
+    backend/
+├── core/                      
+│   ├── migrations/            
+│   ├── admin.py               
+│   ├── apps.py                
+│   ├── models.py              
+│   ├── serializers.py         
+│   ├── tests.py               
+│   ├── urls.py                
+│   └── views.py               
+├── inventario/                
+│   ├── __pycache__/           
+│   ├── __init__.py            
+│   ├── asgi.py                
+│   ├── settings.py            
+│   ├── urls.py                
+│   └── wsgi.py                
+├── manage.py                  
+├── db.sqlite3                 
+└── requirements.txt          
+
+frontend/                      

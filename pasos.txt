@@ -1,0 +1,41 @@
+instalar:
+1. Python 3.10 o superior: https://www.python.org/downloads/
+2. Node.js 18 o superior: https://nodejs.org/
+3. Git (opcional): https://git-scm.com/
+
+backend:
+cd backend
+python -m venv venv
+venv\Scripts\activate
+echo Django==4.2.7 > requirements.txt
+echo djangorestframework==3.14.0 >> requirements.txt
+echo django-cors-headers==4.3.1 >> requirements.txt
+pip install -r requirements.txt
+django-admin startproject inventario .
+python manage.py startapp core
+python manage.py makemigrations core
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
+
+
+frontend:
+# Entrar a la carpeta frontend
+cd inventario-app/frontend
+
+# Crear package.json
+npm init -y
+
+# Instalar dependencias
+npm install react react-dom axios lucide-react
+npm install -D vite @vitejs/plugin-react tailwindcss autoprefixer postcss
+
+# Inicializar Tailwind CSS
+npx tailwindcss init -p
+terminal de visual:
+cd inventario-app/frontend
+npm run dev
+
+
+http://localhost:3000
+ http://127.0.0.1:8000
