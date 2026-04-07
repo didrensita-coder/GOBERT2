@@ -1,48 +1,53 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import Resumen from './Resumen';
 import Inventario from './Inventario';
 import AgregarEquipo from './AgregarEquipo';
-import GestionUsuarios from './GestionUsuarios';
-import { logout } from '../services/api';
+import Usuarios from './Usuarios';
 
-const Dashboard = ({ equipos, setEquipos, currentUser, setCurrentUser, setIsLoggedIn }) => {
-  const [vistaActual, setVistaActual] = useState('resumen');
+const Dashboard = ({ equipos, setEquipos, currentUser, onLogout }) => {
+  const { vista } = useParams();
+  const navigate = useNavigate();
 
-  const handleLogout = async () => {
-    await logout();
-    localStorage.removeItem('user');
-    setCurrentUser(null);
-    setIsLoggedIn(false);
+  const getTitle = () => {
+    const titles = {
+      resumen: 'Resumen del Inventario',
+      inventario: 'Inventario de Equipos',
+      agregar: 'Agregar Nuevo Equipo',
+      usuarios: 'Gestión de Usuarios'
+    };
+    return titles[vista] || 'Resumen del Inventario';
   };
 
-  const renderVista = () => {
-    switch (vistaActual) {
+  const renderContent = () => {
+    switch (vista) {
       case 'resumen':
         return <Resumen equipos={equipos} />;
       case 'inventario':
         return <Inventario equipos={equipos} setEquipos={setEquipos} currentUser={currentUser} />;
-      case 'agregar':
-        return <AgregarEquipo equipos={equipos} setEquipos={setEquipos} currentUser={currentUser} />;
       case 'usuarios':
-        return <GestionUsuarios currentUser={currentUser} />;
+        if (currentUser?.rol === 'admin') {
+          return <Usuarios currentUser={currentUser} />;
+        }
+        return <Resumen equipos={equipos} />;
       default:
         return <Resumen equipos={equipos} />;
     }
   };
 
   return (
-    <div className="flex h-full bg-gray-100">
+    <div className="flex h-screen">
       <Sidebar 
-        vistaActual={vistaActual} 
-        setVistaActual={setVistaActual} 
         currentUser={currentUser}
-        onLogout={handleLogout}
+        onLogout={onLogout}
       />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header currentUser={currentUser} />
-        <div className="flex-1 overflow-y-auto p-8">{renderVista()}</div>
+        <Header title={getTitle()} onLogout={onLogout} />
+        <main className="flex-1 overflow-y-auto p-6 bg-gray-100">
+          {renderContent()}
+        </main>
       </div>
     </div>
   );

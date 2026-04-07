@@ -1,22 +1,37 @@
 import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, List, PlusCircle, Users, Shield, LogOut } from 'lucide-react';
 
-const Sidebar = ({ vistaActual, setVistaActual, currentUser, onLogout }) => {
-  // Elementos base del menú (visibles para todos)
+const Sidebar = ({ currentUser, onLogout }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Obtener la vista actual de la URL
+  const getCurrentView = () => {
+    const path = location.pathname;
+    if (path.includes('/usuarios')) return 'usuarios';
+    if (path.includes('/inventario')) return 'inventario';
+    return 'resumen';
+  };
+
+  const vistaActual = getCurrentView();
+
   const items = [
-    { id: 'resumen', label: 'Resumen', icon: Home },
-    { id: 'inventario', label: 'Inventario', icon: List },
-    { id: 'agregar', label: 'Agregar Equipo', icon: PlusCircle },
+    { id: 'resumen', label: 'Resumen', icon: Home, path: '/dashboard/resumen' },
+    { id: 'inventario', label: 'Inventario', icon: List, path: '/dashboard/inventario' },
+    { id: 'agregar', label: 'Agregar Equipo', icon: PlusCircle, path: '/seleccionar-tipo' },
   ];
 
-  // Si es administrador, agregar la opción de gestión de usuarios
   if (currentUser && currentUser.rol === 'admin') {
-    items.push({ id: 'usuarios', label: 'Gestionar Usuarios', icon: Users });
+    items.push({ id: 'usuarios', label: 'Gestionar Usuarios', icon: Users, path: '/dashboard/usuarios' });
   }
+
+  const handleNavigation = (path) => {
+    navigate(path);
+  };
 
   return (
     <div className="w-72 bg-gradient-to-b from-[#1e3c72] to-[#2a5298] text-white p-6 overflow-y-auto shadow-lg flex flex-col h-full">
-      {/* Logo y título */}
       <div className="mb-8 pb-4 border-b border-white/20">
         <div className="flex items-center gap-2 mb-2">
           <Shield size={28} className="text-white" />
@@ -26,7 +41,6 @@ const Sidebar = ({ vistaActual, setVistaActual, currentUser, onLogout }) => {
           </div>
         </div>
         
-        {/* Información del usuario actual */}
         <div className="mt-4 pt-2">
           <div className="text-sm font-medium">{currentUser?.username || 'Usuario'}</div>
           <div className="text-xs opacity-75 mt-1">
@@ -35,24 +49,22 @@ const Sidebar = ({ vistaActual, setVistaActual, currentUser, onLogout }) => {
                 <Shield size={12} /> Administrador
               </span>
             ) : (
-              <span className="flex items-center gap-1">
-                👤 Coordinador
-              </span>
+              <span className="flex items-center gap-1">👤 Coordinador</span>
             )}
           </div>
         </div>
       </div>
 
-      {/* Menú de navegación */}
       <nav className="flex-1">
         {items.map((item) => {
           const Icon = item.icon;
+          const isActive = vistaActual === item.id;
           return (
             <div
               key={item.id}
-              onClick={() => setVistaActual(item.id)}
+              onClick={() => handleNavigation(item.path)}
               className={`flex items-center gap-3 px-4 py-3 mb-2 rounded-lg cursor-pointer transition-all ${
-                vistaActual === item.id
+                isActive
                   ? 'bg-white/30 border-l-4 border-white pl-3'
                   : 'hover:bg-white/20'
               }`}
@@ -64,7 +76,6 @@ const Sidebar = ({ vistaActual, setVistaActual, currentUser, onLogout }) => {
         })}
       </nav>
 
-      {/* Botón de cerrar sesión */}
       <div className="mt-auto pt-4 border-t border-white/20">
         <button
           onClick={onLogout}

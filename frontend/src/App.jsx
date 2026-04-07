@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
-import { getEquipos, verificarAuth } from './services/api';
+import SeleccionTipoEquipo from './components/SeleccionTipoEquipo';
+import FormularioComputadora from './components/FormularioComputadora';
+import FormularioImpresora from './components/FormularioImpresora';
+import FormularioMonitor from './components/FormularioMonitor';
+import { getEquipos } from './services/api';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -10,18 +15,14 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        const user = JSON.parse(storedUser);
-        setCurrentUser(user);
-        setIsLoggedIn(true);
-        await cargarEquipos();
-      }
-      setLoading(false);
-    };
-    
-    checkAuth();
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      setCurrentUser(user);
+      setIsLoggedIn(true);
+      cargarEquipos();
+    }
+    setLoading(false);
   }, []);
 
   const cargarEquipos = async () => {
@@ -35,9 +36,15 @@ function App() {
     cargarEquipos();
   };
 
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setCurrentUser(null);
+    localStorage.removeItem('user');
+  };
+
   if (loading) {
     return (
-      <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-[#1e3c72] to-[#2a5298]">
+      <div className="h-screen w-full flex items-center justify-center bg-gradient-to-br from-[#1e3c72] to-[#2a5298]">
         <div className="text-white text-xl">Cargando...</div>
       </div>
     );
@@ -48,13 +55,29 @@ function App() {
   }
 
   return (
-    <Dashboard 
-      equipos={equipos} 
-      setEquipos={setEquipos} 
-      currentUser={currentUser}
-      setCurrentUser={setCurrentUser}
-      setIsLoggedIn={setIsLoggedIn}
-    />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Navigate to="/dashboard/resumen" />} />
+        <Route path="/dashboard/:vista" element={
+          <Dashboard 
+            equipos={equipos} 
+            setEquipos={setEquipos} 
+            currentUser={currentUser}
+            onLogout={handleLogout}
+          />
+        } />
+        <Route path="/seleccionar-tipo" element={<SeleccionTipoEquipo />} />
+        <Route path="/agregar/computadora" element={
+          <FormularioComputadora equipos={equipos} setEquipos={setEquipos} />
+        } />
+        <Route path="/agregar/impresora" element={
+          <FormularioImpresora equipos={equipos} setEquipos={setEquipos} />
+        } />
+        <Route path="/agregar/monitor" element={
+          <FormularioMonitor equipos={equipos} setEquipos={setEquipos} />
+        } />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
