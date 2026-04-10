@@ -1,7 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser, User
-from django.db.models.signals import post_save
-from django.dispatch import receiver
+from django.contrib.auth.models import AbstractUser
 
 class Usuario(AbstractUser):
     """Modelo personalizado de usuario"""
@@ -40,17 +38,36 @@ class Equipo(models.Model):
         ('otro', 'Otro'),
     ]
     
-    # Datos del equipo
+    # 👇 AGREGA ESTO 👇
+    USO_CHOICES = [
+        ('critico', '🔴 Crítico'),
+        ('importante', '🟡 Importante'),
+        ('basico', '🟢 Básico'),
+    ]
+    
+    # Datos generales
     codigo_equipo = models.CharField(max_length=50, unique=True)
     tipo = models.CharField(max_length=50, choices=TIPO_CHOICES)
     ubicacion = models.CharField(max_length=200)
     usuario_asignado = models.CharField(max_length=200)
+    uso = models.CharField(max_length=20, choices=USO_CHOICES, default='basico')  # ← NUEVO CAMPO
     
-    # Especificaciones técnicas
+    # Especificaciones técnicas (para computadoras)
     procesador = models.CharField(max_length=200, blank=True, default='N/A')
     ram = models.CharField(max_length=100, blank=True, default='N/A')
     disco_duro = models.CharField(max_length=200, blank=True, default='N/A')
     sistema_operativo = models.CharField(max_length=200, blank=True, default='N/A')
+    
+    # Campos específicos para impresoras
+    marca = models.CharField(max_length=100, blank=True, default='')
+    modelo = models.CharField(max_length=100, blank=True, default='')
+    serial = models.CharField(max_length=100, blank=True, default='')
+    
+    # Campos específicos para monitores
+    tamano = models.CharField(max_length=50, blank=True, default='')
+    resolucion = models.CharField(max_length=50, blank=True, default='')
+    tipo_pantalla = models.CharField(max_length=50, blank=True, default='')
+    puertos = models.CharField(max_length=200, blank=True, default='')
     
     # Estado
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='bueno')

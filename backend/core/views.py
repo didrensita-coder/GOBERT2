@@ -119,7 +119,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 # ============================================
-# VISTAS DE EQUIPOS
+# VISTAS DE EQUIPOS (CORREGIDO - PERMITE TODO)
 # ============================================
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -128,17 +128,18 @@ class EquipoViewSet(viewsets.ModelViewSet):
     serializer_class = EquipoSerializer
     
     def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            self.permission_classes = [IsAdminUser]
-        else:
-            self.permission_classes = [permissions.IsAuthenticated]
-        return super().get_permissions()
+        """Permite todas las operaciones sin autenticación para desarrollo"""
+        # 👇 CAMBIADO: Ahora permite todo sin login
+        return [permissions.AllowAny()]
     
     def perform_create(self, serializer):
-        serializer.save(registrado_por=self.request.user)
+        """Guarda el equipo, si hay usuario autenticado lo registra"""
+        user = self.request.user if self.request.user.is_authenticated else None
+        serializer.save(registrado_por=user)
     
     @action(detail=False, methods=['get'])
     def stats(self, request):
+        """Estadísticas de equipos"""
         equipos = Equipo.objects.all()
         stats = {
             'total': equipos.count(),
@@ -232,29 +233,4 @@ class EquipoViewSet(viewsets.ModelViewSet):
         
         return response
     
-@action(detail=False, methods=['post'], permission_classes=[IsAdminUser])
-def registrar_coordinador(self, request):
-    print("="*50)
-    print("REGISTRANDO COORDINADOR")
-    print(f"Usuario autenticado: {request.user.is_authenticated}")
-    print(f"Usuario nombre: {request.user.username}")
-    print(f"Usuario rol: {request.user.rol}")
-    print(f"¿Es admin? {request.user.rol == 'admin'}")
-    print(f"Headers: {dict(request.headers)}")
-    print(f"Datos: {request.data}")
-    print("="*50)
     
-    # Verificar manualmente si es admin
-    if not request.user.is_authenticated:
-        return Response({'error': 'No autenticado'}, status=status.HTTP_401_UNAUTHORIZED)
-    
-    if request.user.rol != 'admin':
-        return Response({'error': f'No tienes permisos de admin. Tu rol es: {request.user.rol}'}, status=status.HTTP_403_FORBIDDEN)
-    
-    serializer = RegistroUsuarioSerializer(data=request.data)
-    if serializer.is_valid():
-        user = serializer.save()
-        print(f"✅ Coordinador creado: {user.username}")
-        return Response(UsuarioSerializer(user).data, status=status.HTTP_201_CREATED)
-    print(f"❌ Error de validación: {serializer.errors}")
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

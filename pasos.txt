@@ -37,5 +37,21 @@ cd inventario-app/frontend
 npm run dev
 
 
-http://localhost:3000
- http://127.0.0.1:8000
+
+
+
+
+
+ github:
+ # Clonar el repositorio
+git clone https://github.com/tu-usuario/gobert2.git
+
+# Entrar a la carpeta
+cd gobert2
+
+
+Frontend: http://localhost:3000
+
+Backend API: http://localhost:8000/api/equipos/
+
+Admin: http://localhost:8000/admin
