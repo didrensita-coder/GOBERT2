@@ -11,6 +11,7 @@ class Usuario(AbstractUser):
     rol = models.CharField(max_length=20, choices=ROLES, default='coordinador')
     telefono = models.CharField(max_length=20, blank=True)
     departamento = models.CharField(max_length=100, blank=True)
+    foto_perfil = models.ImageField(upload_to='perfiles/', blank=True, null=True)
     
     class Meta:
         verbose_name = 'Usuario'
@@ -25,6 +26,7 @@ class Equipo(models.Model):
         ('bueno', '✅ Bueno'),
         ('regular', '⚠️ Regular'),
         ('malo', '❌ Malo'),
+        
     ]
     
     TIPO_CHOICES = [
@@ -38,7 +40,6 @@ class Equipo(models.Model):
         ('otro', 'Otro'),
     ]
     
-    # 👇 AGREGA ESTO 👇
     USO_CHOICES = [
         ('critico', '🔴 Crítico'),
         ('importante', '🟡 Importante'),
@@ -50,13 +51,14 @@ class Equipo(models.Model):
     tipo = models.CharField(max_length=50, choices=TIPO_CHOICES)
     ubicacion = models.CharField(max_length=200)
     usuario_asignado = models.CharField(max_length=200)
-    uso = models.CharField(max_length=20, choices=USO_CHOICES, default='basico')  # ← NUEVO CAMPO
+    uso = models.CharField(max_length=20, choices=USO_CHOICES, default='basico')
     
     # Especificaciones técnicas (para computadoras)
     procesador = models.CharField(max_length=200, blank=True, default='N/A')
     ram = models.CharField(max_length=100, blank=True, default='N/A')
     disco_duro = models.CharField(max_length=200, blank=True, default='N/A')
     sistema_operativo = models.CharField(max_length=200, blank=True, default='N/A')
+    foto = models.ImageField(upload_to='equipos/', blank=True, null=True)
     
     # Campos específicos para impresoras
     marca = models.CharField(max_length=100, blank=True, default='')

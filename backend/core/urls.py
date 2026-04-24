@@ -12,4 +12,3 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name='logout'),
     path('verificar/', VerificarAuthView.as_view(), name='verificar'),
 ]
-

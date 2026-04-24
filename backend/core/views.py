@@ -1,4 +1,6 @@
+# core/views.py
 from django.views.decorators.csrf import csrf_exempt
+from rest_framework.parsers import MultiPartParser, FormParser
 from django.utils.decorators import method_decorator
 from rest_framework import viewsets, status, permissions
 from rest_framework.response import Response
@@ -50,16 +52,20 @@ class LoginView(APIView):
             user = serializer.validated_data['user']
             login(request, user)
             print(f"✅ Login exitoso: {user.username}")
+            
+            # Usar el serializer para los datos del usuario
+            user_serializer = UsuarioSerializer(user)
+            user_data = user_serializer.data
+            
+            # Agregar la URL completa de la foto
+            if user.foto_perfil:
+                user_data['foto_perfil'] = request.build_absolute_uri(user.foto_perfil.url)
+            else:
+                user_data['foto_perfil'] = None
+            
             return Response({
                 'success': True,
-                'user': {
-                    'id': user.id,
-                    'username': user.username,
-                    'email': user.email,
-                    'rol': user.rol,
-                    'first_name': user.first_name,
-                    'last_name': user.last_name
-                }
+                'user': user_data
             })
         print(f"❌ Error: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -76,13 +82,19 @@ class LogoutView(APIView):
 class VerificarAuthView(APIView):
     def get(self, request):
         if request.user.is_authenticated:
+            user_data = {
+                'id': request.user.id,
+                'username': request.user.username,
+                'rol': request.user.rol,
+            }
+            if request.user.foto_perfil:
+                user_data['foto_perfil'] = request.build_absolute_uri(request.user.foto_perfil.url)
+            else:
+                user_data['foto_perfil'] = None
+            
             return Response({
                 'authenticated': True,
-                'user': {
-                    'id': request.user.id,
-                    'username': request.user.username,
-                    'rol': request.user.rol,
-                }
+                'user': user_data
             })
         return Response({'authenticated': False})
 
@@ -115,31 +127,94 @@ class UserViewSet(viewsets.ModelViewSet):
     def me(self, request):
         """Obtener usuario actual"""
         serializer = UsuarioSerializer(request.user)
-        return Response(serializer.data)
+        user_data = serializer.data
+        if request.user.foto_perfil:
+            user_data['foto_perfil'] = request.build_absolute_uri(request.user.foto_perfil.url)
+        return Response(user_data)
+    
+    @action(detail=False, methods=['put'], permission_classes=[permissions.IsAuthenticated])
+    def actualizar_perfil(self, request):
+        """Actualizar el perfil del usuario autenticado"""
+        user = request.user
+        
+        # Actualizar campos básicos
+        if 'first_name' in request.data:
+            user.first_name = request.data['first_name']
+        if 'last_name' in request.data:
+            user.last_name = request.data['last_name']
+        if 'email' in request.data:
+            user.email = request.data['email']
+        if 'telefono' in request.data:
+            user.telefono = request.data['telefono']
+        if 'departamento' in request.data:
+            user.departamento = request.data['departamento']
+        if 'foto_perfil' in request.FILES:
+            # Eliminar foto anterior si existe
+            if user.foto_perfil:
+                user.foto_perfil.delete()
+            user.foto_perfil = request.FILES['foto_perfil']
+        
+        user.save()
+        
+        # Usar el serializer para devolver los datos consistentemente
+        serializer = UsuarioSerializer(user)
+        user_data = serializer.data
+        
+        # Agregar la URL completa de la foto
+        if user.foto_perfil:
+            user_data['foto_perfil'] = request.build_absolute_uri(user.foto_perfil.url)
+        else:
+            user_data['foto_perfil'] = None
+        
+        return Response({
+            'success': True,
+            'user': user_data
+        })
+    
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def cambiar_password(self, request):
+        """Cambiar la contraseña del usuario autenticado"""
+        user = request.user
+        current_password = request.data.get('current_password')
+        new_password = request.data.get('new_password')
+        
+        if not user.check_password(current_password):
+            return Response(
+                {'errors': {'current_password': 'La contraseña actual es incorrecta'}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if len(new_password) < 6:
+            return Response(
+                {'errors': {'new_password': 'La contraseña debe tener al menos 6 caracteres'}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        user.set_password(new_password)
+        user.save()
+        
+        return Response({'success': True, 'message': 'Contraseña actualizada correctamente'})
 
 
 # ============================================
-# VISTAS DE EQUIPOS (CORREGIDO - PERMITE TODO)
+# VISTAS DE EQUIPOS
 # ============================================
 
 @method_decorator(csrf_exempt, name='dispatch')
 class EquipoViewSet(viewsets.ModelViewSet):
     queryset = Equipo.objects.all()
     serializer_class = EquipoSerializer
+    parser_classes = [MultiPartParser, FormParser]
     
     def get_permissions(self):
-        """Permite todas las operaciones sin autenticación para desarrollo"""
-        # 👇 CAMBIADO: Ahora permite todo sin login
         return [permissions.AllowAny()]
     
     def perform_create(self, serializer):
-        """Guarda el equipo, si hay usuario autenticado lo registra"""
         user = self.request.user if self.request.user.is_authenticated else None
         serializer.save(registrado_por=user)
     
     @action(detail=False, methods=['get'])
     def stats(self, request):
-        """Estadísticas de equipos"""
         equipos = Equipo.objects.all()
         stats = {
             'total': equipos.count(),
@@ -161,7 +236,6 @@ class EquipoViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'], permission_classes=[IsAdminUser])
     def exportar_excel(self, request):
-        """Exportar equipos a Excel (solo admin)"""
         import openpyxl
         from openpyxl.styles import Font, PatternFill, Alignment
         
@@ -210,7 +284,6 @@ class EquipoViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'], permission_classes=[IsAdminUser])
     def exportar_csv(self, request):
-        """Exportar equipos a CSV (solo admin)"""
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="equipos.csv"'
         
@@ -232,5 +305,3 @@ class EquipoViewSet(viewsets.ModelViewSet):
             ])
         
         return response
-    
-    

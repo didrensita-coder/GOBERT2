@@ -1,3 +1,4 @@
+# core/serializers.py
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from .models import Usuario, Equipo
@@ -5,7 +6,7 @@ from .models import Usuario, Equipo
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Usuario
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'rol', 'telefono', 'departamento']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'rol', 'telefono', 'departamento', 'foto_perfil']
 
 
 class RegistroUsuarioSerializer(serializers.ModelSerializer):
