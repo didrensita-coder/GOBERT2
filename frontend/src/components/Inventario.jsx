@@ -1,51 +1,86 @@
 import React, { useState } from 'react';
-import { Search, Edit2, Trash2 } from 'lucide-react';
-import ModalEditar from './ModalEditar';
+import { useNavigate } from 'react-router-dom';
+import { Search, Eye, Calendar, Filter, X, ChevronDown } from 'lucide-react';
 import { deleteEquipo, getEquipos } from '../services/api';
 
 const Inventario = ({ equipos, setEquipos }) => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filtro, setFiltro] = useState('todos');
-  const [equipoEditando, setEquipoEditando] = useState(null);
+  
+  // Filtros principales
+  const [filtroTipo, setFiltroTipo] = useState('todos');
+  const [filtroUso, setFiltroUso] = useState('todos');
+  const [filtroEstado, setFiltroEstado] = useState('todos');
+  const [filtroDepartamento, setFiltroDepartamento] = useState('todos');
+  
+  const [mostrarFiltros, setMostrarFiltros] = useState(false);
+
+  // Obtener departamentos únicos de las ubicaciones
+  const departamentos = ['todos', ...new Set(equipos.map(eq => eq.ubicacion).filter(Boolean))];
+
+  // Función para extraer departamento de la ubicación (si quieres buscar por palabra clave)
+  const buscarEnUbicacion = (ubicacion, termino) => {
+    if (!termino || termino === 'todos') return true;
+    return ubicacion.toLowerCase().includes(termino.toLowerCase());
+  };
 
   const equiposFiltrados = equipos.filter((eq) => {
-    const matchFiltro = filtro === 'todos' || eq.uso === filtro;
+    // Filtro por TIPO (principal)
+    const matchTipo = filtroTipo === 'todos' || eq.tipo === filtroTipo;
+    
+    // Filtro por USO
+    const matchUso = filtroUso === 'todos' || eq.uso === filtroUso;
+    
+    // Filtro por ESTADO
+    const matchEstado = filtroEstado === 'todos' || eq.estado === filtroEstado;
+    
+    // Filtro por DEPARTAMENTO/UBICACIÓN
+    const matchDepartamento = filtroDepartamento === 'todos' || 
+      eq.ubicacion.toLowerCase().includes(filtroDepartamento.toLowerCase());
+    
+    // Búsqueda general
     const matchSearch = !searchTerm ||
       eq.codigo_equipo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       eq.usuario_asignado.toLowerCase().includes(searchTerm.toLowerCase()) ||
       eq.ubicacion.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchFiltro && matchSearch;
+    
+    return matchTipo && matchUso && matchEstado && matchDepartamento && matchSearch;
   });
 
-  const handleEliminar = async (id, codigo) => {
-    if (window.confirm(`¿Está seguro que desea eliminar el equipo ${codigo}?`)) {
-      const result = await deleteEquipo(id);
-      if (result.success) {
-        const nuevosEquipos = await getEquipos();
-        setEquipos(nuevosEquipos);
-        mostrarNotificacion('Equipo eliminado exitosamente', 'success');
-      } else {
-        mostrarNotificacion('Error al eliminar el equipo', 'error');
-      }
-    }
+  const handleVerDetalle = (id) => {
+    navigate(`/equipo/${id}`);
   };
 
-  const mostrarNotificacion = (mensaje, tipo) => {
-    const notification = document.createElement('div');
-    notification.className = `fixed top-5 right-5 px-5 py-4 rounded-lg text-white font-medium z-50 animate-slideIn bg-${tipo === 'success' ? 'green' : 'red'}-500`;
-    notification.textContent = mensaje;
-    document.body.appendChild(notification);
-    setTimeout(() => {
-      notification.classList.add('animate-slideOut');
-      setTimeout(() => notification.remove(), 300);
-    }, 3000);
+  // Contar equipos por tipo para mostrar badges
+  const contarPorTipo = (tipo) => {
+    return equipos.filter(eq => eq.tipo === tipo).length;
+  };
+
+  const limpiarFiltros = () => {
+    setFiltroTipo('todos');
+    setFiltroUso('todos');
+    setFiltroEstado('todos');
+    setFiltroDepartamento('todos');
+    setSearchTerm('');
+  };
+
+  const hayFiltrosActivos = filtroTipo !== 'todos' || filtroUso !== 'todos' || filtroEstado !== 'todos' || filtroDepartamento !== 'todos' || searchTerm !== '';
+
+  const formatearFecha = (fecha) => {
+    if (!fecha) return 'N/A';
+    const date = new Date(fecha);
+    return date.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
   };
 
   const getEstadoBadge = (estado) => {
     const badges = {
-      optimo: <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">✓ Óptimo</span>,
-      regular: <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">⚠ Regular</span>,
-      danado: <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">✗ Dañado</span>,
+      bueno: <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">✅ Bueno</span>,
+      regular: <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">⚠️ Regular</span>,
+      malo: <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">❌ Malo</span>,
     };
     return badges[estado] || estado;
   };
@@ -53,14 +88,24 @@ const Inventario = ({ equipos, setEquipos }) => {
   const getUsoBadge = (uso) => {
     const badges = {
       critico: <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">🔴 Crítico</span>,
-      importante: <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-800">🟡 Importante</span>,
+      importante: <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">🟡 Importante</span>,
       basico: <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">🟢 Básico</span>,
     };
     return badges[uso] || uso;
   };
 
+  const getTipoDisplay = (tipo) => {
+    const tipos = {
+      'computadora_escritorio': '💻 Computadora',
+      'impresora': '🖨️ Impresora',
+      'monitor': '🖥️ Monitor',
+    };
+    return tipos[tipo] || tipo;
+  };
+
   return (
     <div>
+      {/* Barra de búsqueda principal */}
       <div className="bg-white rounded-lg border border-gray-200 p-3 mb-5 flex items-center gap-3">
         <Search size={18} className="text-gray-400" />
         <input
@@ -70,35 +115,207 @@ const Inventario = ({ equipos, setEquipos }) => {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="flex-1 outline-none text-sm"
         />
+        <button
+          onClick={() => setMostrarFiltros(!mostrarFiltros)}
+          className={`px-3 py-1 rounded-md text-sm flex items-center gap-1 transition-colors ${
+            mostrarFiltros || hayFiltrosActivos
+              ? 'bg-[#2a5298] text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          <Filter size={14} />
+          Filtros
+          {hayFiltrosActivos && (
+            <span className="ml-1 bg-white text-[#2a5298] rounded-full w-4 h-4 text-xs flex items-center justify-center">
+              {[filtroTipo, filtroUso, filtroEstado, filtroDepartamento].filter(f => f !== 'todos').length + (searchTerm ? 1 : 0)}
+            </span>
+          )}
+        </button>
       </div>
 
-      <div className="flex gap-3 mb-5 flex-wrap">
-        {[
-          { id: 'todos', label: 'Todos' },
-          { id: 'critico', label: '🔴 Críticos' },
-          { id: 'importante', label: '🟡 Importantes' },
-          { id: 'basico', label: '🟢 Básicos' },
-        ].map((btn) => (
-          <button
-            key={btn.id}
-            onClick={() => setFiltro(btn.id)}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-              filtro === btn.id
-                ? 'bg-[#2a5298] text-white'
-                : 'bg-white border border-gray-300 text-gray-700 hover:border-[#2a5298] hover:text-[#2a5298]'
-            }`}
-          >
-            {btn.label}
-          </button>
-        ))}
-      </div>
+      {/* Panel de filtros desplegable */}
+      {mostrarFiltros && (
+        <div className="bg-white rounded-xl shadow-md p-5 mb-5 border border-gray-100 animate-fadeIn">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-semibold text-gray-700 flex items-center gap-2">
+              <Filter size={16} /> Filtros avanzados
+            </h3>
+            {hayFiltrosActivos && (
+              <button
+                onClick={limpiarFiltros}
+                className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1"
+              >
+                <X size={12} /> Limpiar todos
+              </button>
+            )}
+          </div>
 
-      {equipos.length >= 999 && (
-        <div className="bg-red-50 text-red-700 px-4 py-3 rounded-md mb-5 text-sm font-medium">
-          ⚠️ Se ha alcanzado el límite máximo de 999 equipos. Elimine algunos para agregar nuevos.
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Filtro por TIPO */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
+                📦 Tipo de Equipo
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { id: 'todos', label: 'Todos', count: equipos.length },
+                  { id: 'computadora_escritorio', label: '💻 Computadoras', count: contarPorTipo('computadora_escritorio') },
+                  { id: 'impresora', label: '🖨️ Impresoras', count: contarPorTipo('impresora') },
+                  { id: 'monitor', label: '🖥️ Monitores', count: contarPorTipo('monitor') },
+                ].map((btn) => (
+                  <button
+                    key={btn.id}
+                    onClick={() => setFiltroTipo(btn.id)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      filtroTipo === btn.id
+                        ? 'bg-[#2a5298] text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {btn.label}
+                    {btn.count > 0 && (
+                      <span className={`ml-1 text-xs ${filtroTipo === btn.id ? 'text-white/80' : 'text-gray-400'}`}>
+                        ({btn.count})
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Filtro por USO */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
+                ⭐ Clasificación de Uso
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { id: 'todos', label: 'Todos' },
+                  { id: 'critico', label: '🔴 Crítico' },
+                  { id: 'importante', label: '🟡 Importante' },
+                  { id: 'basico', label: '🟢 Básico' },
+                ].map((btn) => (
+                  <button
+                    key={btn.id}
+                    onClick={() => setFiltroUso(btn.id)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      filtroUso === btn.id
+                        ? 'bg-[#2a5298] text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {btn.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Filtro por ESTADO */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
+                🔧 Estado del Equipo
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { id: 'todos', label: 'Todos' },
+                  { id: 'bueno', label: '✅ Bueno' },
+                  { id: 'regular', label: '⚠️ Regular' },
+                  { id: 'malo', label: '❌ Malo' },
+                ].map((btn) => (
+                  <button
+                    key={btn.id}
+                    onClick={() => setFiltroEstado(btn.id)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      filtroEstado === btn.id
+                        ? 'bg-[#2a5298] text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {btn.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Filtro por DEPARTAMENTO/UBICACIÓN */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
+                📍 Departamento / Ubicación
+              </label>
+              <select
+                value={filtroDepartamento}
+                onChange={(e) => setFiltroDepartamento(e.target.value)}
+                className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                {departamentos.map((depto) => (
+                  <option key={depto} value={depto}>
+                    {depto === 'todos' ? 'Todos los departamentos' : depto}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Resumen de filtros activos */}
+          {hayFiltrosActivos && (
+            <div className="mt-4 pt-3 border-t border-gray-100 flex flex-wrap gap-2">
+              <span className="text-xs text-gray-500">Filtros activos:</span>
+              {filtroTipo !== 'todos' && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
+                  {getTipoDisplay(filtroTipo)}
+                  <button onClick={() => setFiltroTipo('todos')} className="hover:text-blue-900">×</button>
+                </span>
+              )}
+              {filtroUso !== 'todos' && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs">
+                  {filtroUso === 'critico' && '🔴 Crítico'}
+                  {filtroUso === 'importante' && '🟡 Importante'}
+                  {filtroUso === 'basico' && '🟢 Básico'}
+                  <button onClick={() => setFiltroUso('todos')} className="hover:text-yellow-900">×</button>
+                </span>
+              )}
+              {filtroEstado !== 'todos' && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
+                  {filtroEstado === 'bueno' && '✅ Bueno'}
+                  {filtroEstado === 'regular' && '⚠️ Regular'}
+                  {filtroEstado === 'malo' && '❌ Malo'}
+                  <button onClick={() => setFiltroEstado('todos')} className="hover:text-green-900">×</button>
+                </span>
+              )}
+              {filtroDepartamento !== 'todos' && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">
+                  📍 {filtroDepartamento}
+                  <button onClick={() => setFiltroDepartamento('todos')} className="hover:text-purple-900">×</button>
+                </span>
+              )}
+              {searchTerm && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
+                  🔍 "{searchTerm}"
+                  <button onClick={() => setSearchTerm('')} className="hover:text-gray-900">×</button>
+                </span>
+              )}
+            </div>
+          )}
         </div>
       )}
 
+      {/* Resultados y contadores */}
+      <div className="flex justify-between items-center mb-4">
+        <p className="text-sm text-gray-500">
+          Mostrando <span className="font-semibold text-gray-700">{equiposFiltrados.length}</span> de{' '}
+          <span className="font-semibold text-gray-700">{equipos.length}</span> equipos
+        </p>
+        {hayFiltrosActivos && (
+          <button
+            onClick={limpiarFiltros}
+            className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1"
+          >
+            <X size={12} /> Limpiar filtros
+          </button>
+        )}
+      </div>
+
+      {/* Tabla de equipos */}
       <div className="bg-white rounded-xl shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -112,40 +329,48 @@ const Inventario = ({ equipos, setEquipos }) => {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">RAM</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Estado</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Uso</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Fecha Registro</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {equiposFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="text-center py-12 text-gray-500">No hay equipos que coincidan con la búsqueda</td>
+                  <td colSpan="10" className="text-center py-12 text-gray-500">
+                    No hay equipos que coincidan con los filtros seleccionados
+                  </td>
                 </tr>
               ) : (
                 equiposFiltrados.map((eq) => (
-                  <tr key={eq.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-medium">{eq.codigo_equipo}</td>
-                    <td className="px-4 py-3 text-sm">{eq.tipo}</td>
+                  <tr 
+                    key={eq.id} 
+                    className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() => handleVerDetalle(eq.id)}
+                  >
+                    <td className="px-4 py-3 text-sm font-medium text-blue-600 hover:text-blue-800">
+                      {eq.codigo_equipo}
+                    </td>
+                    <td className="px-4 py-3 text-sm">{getTipoDisplay(eq.tipo)}</td>
                     <td className="px-4 py-3 text-sm">{eq.usuario_asignado}</td>
                     <td className="px-4 py-3 text-sm">{eq.ubicacion}</td>
-                    <td className="px-4 py-3 text-sm">{eq.procesador}</td>
-                    <td className="px-4 py-3 text-sm">{eq.ram}</td>
+                    <td className="px-4 py-3 text-sm">{eq.procesador || 'N/A'}</td>
+                    <td className="px-4 py-3 text-sm">{eq.ram || 'N/A'}</td>
                     <td className="px-4 py-3 text-sm">{getEstadoBadge(eq.estado)}</td>
                     <td className="px-4 py-3 text-sm">{getUsoBadge(eq.uso)}</td>
                     <td className="px-4 py-3 text-sm">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setEquipoEditando(eq)}
-                          className="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 transition-colors flex items-center gap-1 text-xs"
-                        >
-                          <Edit2 size={12} /> Editar
-                        </button>
-                        <button
-                          onClick={() => handleEliminar(eq.id, eq.codigo_equipo)}
-                          className="px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors flex items-center gap-1 text-xs"
-                        >
-                          <Trash2 size={12} /> Eliminar
-                        </button>
+                      <div className="flex items-center gap-1 text-gray-500">
+                        <Calendar size={12} />
+                        <span>{formatearFecha(eq.fecha_registro)}</span>
                       </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleVerDetalle(eq.id)}
+                        className="px-3 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors flex items-center gap-1 text-xs"
+                        title="Ver detalles"
+                      >
+                        <Eye size={12} /> Ver
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -154,14 +379,16 @@ const Inventario = ({ equipos, setEquipos }) => {
           </table>
         </div>
       </div>
-      
-      {equipoEditando && (
-        <ModalEditar
-          equipo={equipoEditando}
-          onClose={() => setEquipoEditando(null)}
-          setEquipos={setEquipos}
-        />
-      )}
+
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 };

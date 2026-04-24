@@ -19,6 +19,8 @@ const Resumen = ({ equipos }) => {
     otros: 0,
   });
 
+  const [recientes, setRecientes] = useState([]);
+
   useEffect(() => {
     // Calcular estadísticas directamente desde los equipos
     const nuevosStats = {
@@ -39,9 +41,17 @@ const Resumen = ({ equipos }) => {
       otros: equipos.filter(eq => eq.tipo === 'otro' || eq.tipo === 'tablet' || eq.tipo === 'telefono').length,
     };
     setStats(nuevosStats);
-  }, [equipos]);
 
-  const recientes = [...equipos].slice(-5).reverse();
+    // Obtener los 5 equipos más recientes (ordenados por fecha_registro)
+    const equiposOrdenados = [...equipos].sort((a, b) => {
+      const fechaA = new Date(a.fecha_registro);
+      const fechaB = new Date(b.fecha_registro);
+      return fechaB - fechaA; // Más reciente primero
+    });
+    
+    const ultimos5 = equiposOrdenados.slice(0, 5);
+    setRecientes(ultimos5);
+  }, [equipos]);
 
   const getEstadoBadge = (estado) => {
     const estadoNormalizado = estado === 'bueno' ? 'optimo' : (estado === 'malo' ? 'danado' : estado);
@@ -71,6 +81,17 @@ const Resumen = ({ equipos }) => {
       servidor: '🗄️',
     };
     return iconos[tipo] || '📦';
+  };
+
+  const getNombreTipo = (tipo) => {
+    const nombres = {
+      computadora_escritorio: 'Computadora',
+      laptop: 'Laptop',
+      impresora: 'Impresora',
+      monitor: 'Monitor',
+      servidor: 'Servidor',
+    };
+    return nombres[tipo] || tipo;
   };
 
   return (
@@ -117,7 +138,6 @@ const Resumen = ({ equipos }) => {
           <div className="text-2xl font-bold text-[#1e3c72]">{stats.computadoras}</div>
           <div className="text-xs text-gray-500">Computadoras</div>
         </div>
-        
         <div className="bg-white p-4 rounded-xl shadow-md text-center hover:shadow-lg transition-shadow">
           <div className="text-3xl mb-2">🖨️</div>
           <div className="text-2xl font-bold text-[#1e3c72]">{stats.impresoras}</div>
@@ -128,7 +148,6 @@ const Resumen = ({ equipos }) => {
           <div className="text-2xl font-bold text-[#1e3c72]">{stats.monitores}</div>
           <div className="text-xs text-gray-500">Monitores</div>
         </div>
-       
       </div>
 
       {/* Tabla de últimos equipos */}
@@ -145,26 +164,30 @@ const Resumen = ({ equipos }) => {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ubicación</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Estado</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Uso</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Fecha</th>
                 </tr>
               </thead>
               <tbody>
                 {recientes.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="text-center py-12 text-gray-500">Sin equipos registrados</td>
+                    <td colSpan="7" className="text-center py-12 text-gray-500">Sin equipos registrados</td>
                   </tr>
                 ) : (
                   recientes.map((eq, index) => (
                     <tr key={eq.id || index} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium">{eq.codigo_equipo}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-blue-600">{eq.codigo_equipo}</td>
                       <td className="px-4 py-3 text-sm">
                         <span className="flex items-center gap-1">
-                          {getTipoIcono(eq.tipo)} {eq.tipo?.replace('_', ' ') || eq.tipo}
+                          {getTipoIcono(eq.tipo)} {getNombreTipo(eq.tipo)}
                         </span>
-                      </td>
+                       </td>
                       <td className="px-4 py-3 text-sm">{eq.usuario_asignado}</td>
                       <td className="px-4 py-3 text-sm">{eq.ubicacion}</td>
                       <td className="px-4 py-3 text-sm">{getEstadoBadge(eq.estado)}</td>
                       <td className="px-4 py-3 text-sm">{getUsoBadge(eq.uso)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-500">
+                        {eq.fecha_registro ? new Date(eq.fecha_registro).toLocaleDateString('es-ES') : 'N/A'}
+                      </td>
                     </tr>
                   ))
                 )}

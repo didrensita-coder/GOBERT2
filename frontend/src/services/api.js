@@ -1,8 +1,8 @@
+// services/api.js
 import axios from 'axios';
 
-// Usar URL relativa para que use el proxy
 const api = axios.create({
-    baseURL: '/api/',  // ← Cambiado a relativa
+    baseURL: '/api/',
     withCredentials: true,
     headers: {
         'Content-Type': 'application/json',
@@ -17,8 +17,13 @@ export const login = async (username, password) => {
     try {
         const response = await api.post('login/', { username, password });
         if (response.data.success) {
-            localStorage.setItem('user', JSON.stringify(response.data.user));
-            return { success: true, user: response.data.user };
+            // ✅ Asegurar que la foto_perfil existe (aunque sea null)
+            const userWithPhoto = {
+                ...response.data.user,
+                foto_perfil: response.data.user.foto_perfil || null
+            };
+            localStorage.setItem('user', JSON.stringify(userWithPhoto));
+            return { success: true, user: userWithPhoto };
         }
         return { success: false, error: 'Credenciales incorrectas' };
     } catch (error) {
@@ -70,9 +75,12 @@ export const getStats = async () => {
 
 export const createEquipo = async (equipo) => {
     try {
-        const response = await api.post('equipos/', equipo);
+        const response = await axios.post('/api/equipos/', equipo, {
+            withCredentials: true,
+        });
         return { success: true, data: response.data };
     } catch (error) {
+        console.error('Error:', error);
         return { success: false, error: error.message };
     }
 };
@@ -162,4 +170,49 @@ export const deleteUsuario = async (id) => {
     } catch (error) {
         return { success: false };
     }
+};
+
+// ============================================
+// PERFIL DE USUARIO
+// ============================================
+
+export const actualizarPerfil = async (formData) => {
+    try {
+        const response = await axios.put('/api/usuarios/actualizar_perfil/', formData, {
+            withCredentials: true,
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            }
+        });
+        
+        if (response.data.success) {
+            localStorage.setItem('user', JSON.stringify(response.data.user));
+            return { success: true, user: response.data.user };
+        }
+        return { success: false, error: response.data.message || 'Error al actualizar' };
+    } catch (error) {
+        console.error('Error al actualizar perfil:', error);
+        return { success: false, error: 'Error de conexión' };
+    }
+};
+
+export const cambiarPassword = async (currentPassword, newPassword) => {
+    try {
+        const response = await api.post('usuarios/cambiar_password/', {
+            current_password: currentPassword,
+            new_password: newPassword,
+        });
+        
+        if (response.data.success) {
+            return { success: true, message: response.data.message };
+        }
+        return { success: false, error: response.data.message || 'Error al cambiar contraseña' };
+    } catch (error) {
+        console.error('Error al cambiar contraseña:', error);
+        return { success: false, error: 'Error de conexión' };
+    }
+};
+
+export const updateCurrentUser = (user) => {
+    localStorage.setItem('user', JSON.stringify(user));
 };

@@ -6,6 +6,8 @@ import SeleccionTipoEquipo from './components/SeleccionTipoEquipo';
 import FormularioComputadora from './components/FormularioComputadora';
 import FormularioImpresora from './components/FormularioImpresora';
 import FormularioMonitor from './components/FormularioMonitor';
+import DetalleEquipo from './components/DetalleEquipo';
+import PerfilUsuario from './components/PerfilUsuario';
 import { getEquipos } from './services/api';
 
 function App() {
@@ -66,6 +68,13 @@ function App() {
             onLogout={handleLogout}
           />
         } />
+        <Route path="/dashboard/perfil" element={
+          <PerfilUsuario 
+            currentUser={currentUser} 
+            setCurrentUser={setCurrentUser}
+            onLogout={handleLogout}
+          />
+        } />
         <Route path="/seleccionar-tipo" element={<SeleccionTipoEquipo />} />
         <Route path="/agregar/computadora" element={
           <FormularioComputadora equipos={equipos} setEquipos={setEquipos} />
@@ -75,6 +84,9 @@ function App() {
         } />
         <Route path="/agregar/monitor" element={
           <FormularioMonitor equipos={equipos} setEquipos={setEquipos} />
+        } />
+        <Route path="/equipo/:id" element={
+          <DetalleEquipo equipos={equipos} setEquipos={setEquipos} />
         } />
       </Routes>
     </BrowserRouter>

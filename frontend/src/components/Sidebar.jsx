@@ -1,88 +1,105 @@
-import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, List, PlusCircle, Users, Shield, LogOut } from 'lucide-react';
+// components/Sidebar.jsx
+import React, { useState, useEffect } from 'react';
+import { NavLink } from 'react-router-dom';
+import { 
+  LayoutDashboard, 
+  Package, 
+  PlusCircle, 
+  Users, 
+  LogOut,
+  UserCircle
+} from 'lucide-react';
 
-const Sidebar = ({ currentUser, onLogout }) => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  
-  // Obtener la vista actual de la URL
-  const getCurrentView = () => {
-    const path = location.pathname;
-    if (path.includes('/usuarios')) return 'usuarios';
-    if (path.includes('/inventario')) return 'inventario';
-    return 'resumen';
-  };
+const Sidebar = ({ currentUser: propCurrentUser, onLogout }) => {
+  const [currentUser, setCurrentUser] = useState(propCurrentUser);
 
-  const vistaActual = getCurrentView();
+  // Escuchar cambios en localStorage (cuando se actualiza el perfil)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        setCurrentUser(JSON.parse(storedUser));
+      }
+    };
 
-  const items = [
-    { id: 'resumen', label: 'Resumen', icon: Home, path: '/dashboard/resumen' },
-    { id: 'inventario', label: 'Inventario', icon: List, path: '/dashboard/inventario' },
-    { id: 'agregar', label: 'Agregar Equipo', icon: PlusCircle, path: '/seleccionar-tipo' },
+    // También actualizar si cambia la prop
+    setCurrentUser(propCurrentUser);
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [propCurrentUser]);
+
+  const navItems = [
+    { path: '/dashboard/resumen', label: 'Resumen', icon: LayoutDashboard },
+    { path: '/dashboard/inventario', label: 'Inventario', icon: Package },
+    { path: '/seleccionar-tipo', label: 'Agregar Equipo', icon: PlusCircle },
   ];
 
-  if (currentUser && currentUser.rol === 'admin') {
-    items.push({ id: 'usuarios', label: 'Gestionar Usuarios', icon: Users, path: '/dashboard/usuarios' });
+  if (currentUser?.rol === 'admin') {
+    navItems.push({ path: '/dashboard/usuarios', label: 'Usuarios', icon: Users });
   }
 
-  const handleNavigation = (path) => {
-    navigate(path);
-  };
+  navItems.push({ path: '/dashboard/perfil', label: 'Mi Perfil', icon: UserCircle });
+
+  const fotoPerfilUrl = currentUser?.foto_perfil || null;
 
   return (
-    <div className="w-72 bg-gradient-to-b from-[#1e3c72] to-[#2a5298] text-white p-6 overflow-y-auto shadow-lg flex flex-col h-full">
-      <div className="mb-8 pb-4 border-b border-white/20">
-        <div className="flex items-center gap-2 mb-2">
-          <Shield size={28} className="text-white" />
-          <div>
-            <div className="text-lg font-bold uppercase tracking-wide">Inventario</div>
-            <div className="text-xs opacity-75">Sistema de Equipos</div>
+    <div className="w-64 bg-[#1a3565] text-white flex flex-col shadow-xl">
+      <div className="p-6 border-b border-white/10">
+        <h1 className="text-2xl font-bold tracking-wide">INVENTARIO</h1>
+        <p className="text-xs text-white/60 mt-1">Sistema de Gestión</p>
+      </div>
+
+      <nav className="flex-1 py-8">
+        {navItems.map((item) => (
+          <NavLink
+            key={item.path}
+            to={item.path}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-6 py-3 mx-3 rounded-lg transition-all duration-200 ${
+                isActive
+                  ? 'bg-white/10 text-white shadow-md'
+                  : 'text-white/70 hover:bg-white/5 hover:text-white'
+              }`
+            }
+          >
+            <item.icon size={20} />
+            <span className="text-sm font-medium">{item.label}</span>
+          </NavLink>
+        ))}
+      </nav>
+
+      <div className="p-4 border-t border-white/10">
+        <div className="flex items-center gap-3 mb-4 px-2">
+          <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center overflow-hidden">
+            {fotoPerfilUrl ? (
+              <img 
+                src={fotoPerfilUrl} 
+                alt="Foto perfil" 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-sm font-bold">
+                {currentUser?.first_name?.charAt(0) || currentUser?.username?.charAt(0) || 'U'}
+              </span>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">
+              {currentUser?.first_name || currentUser?.username}
+            </p>
+            <p className="text-xs text-white/50 truncate">
+              {currentUser?.rol === 'admin' ? 'Administrador' : 'Coordinador'}
+            </p>
           </div>
         </div>
         
-        <div className="mt-4 pt-2">
-          <div className="text-sm font-medium">{currentUser?.username || 'Usuario'}</div>
-          <div className="text-xs opacity-75 mt-1">
-            {currentUser?.rol === 'admin' ? (
-              <span className="flex items-center gap-1">
-                <Shield size={12} /> Administrador
-              </span>
-            ) : (
-              <span className="flex items-center gap-1">👤 Coordinador</span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <nav className="flex-1">
-        {items.map((item) => {
-          const Icon = item.icon;
-          const isActive = vistaActual === item.id;
-          return (
-            <div
-              key={item.id}
-              onClick={() => handleNavigation(item.path)}
-              className={`flex items-center gap-3 px-4 py-3 mb-2 rounded-lg cursor-pointer transition-all ${
-                isActive
-                  ? 'bg-white/30 border-l-4 border-white pl-3'
-                  : 'hover:bg-white/20'
-              }`}
-            >
-              <Icon size={20} />
-              <span className="text-sm font-medium">{item.label}</span>
-            </div>
-          );
-        })}
-      </nav>
-
-      <div className="mt-auto pt-4 border-t border-white/20">
         <button
           onClick={onLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/20 transition-all text-sm font-medium"
+          className="w-full flex items-center justify-center gap-3 px-4 py-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 transition-colors duration-200 text-sm font-medium"
         >
-          <LogOut size={20} />
-          <span>Cerrar Sesión</span>
+          <LogOut size={18} />
+          Cerrar Sesión
         </button>
       </div>
     </div>
