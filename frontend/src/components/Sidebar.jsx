@@ -46,6 +46,7 @@ const Sidebar = ({ currentUser: propCurrentUser, onLogout }) => {
   return (
     <div className="w-64 bg-[#1a3565] text-white flex flex-col shadow-xl">
       <div className="p-6 border-b border-white/10">
+      <img src="/logo2.png" alt="Logo Inventario" className="w-20 h-20 mx-auto mb-3 object-contain" />
         <h1 className="text-2xl font-bold tracking-wide">INVENTARIO</h1>
         <p className="text-xs text-white/60 mt-1">Sistema de Gestión</p>
       </div>

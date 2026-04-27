@@ -28,8 +28,9 @@ const Login = ({ onLogin }) => {
     <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-[#1e3c72] to-[#2a5298]">
       <div className="bg-white rounded-xl p-10 w-full max-w-md shadow-2xl">
         <div className="text-center mb-8">
-          <div className="text-3xl font-bold text-[#1e3c72] mb-2">🖥️ Inventario</div>
-          <div className="text-sm text-gray-500">Sistema de Equipos Computacionales</div>
+          <img src="/avatar8.png" alt="Logo Inventario" className="w-40 h-40 mx-auto mb-3 object-contain" />
+          <div className="text-3xl font-bold text-[#1e3c72] mb-2">Sistema Gobert</div>
+          <div className="text-sm text-gray-500">Sistema de inventario de equipos computacionales.</div>
         </div>
         
         {error && (

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Eye, Calendar, Filter, X, ChevronDown } from 'lucide-react';
+import { Search, Eye, Calendar, Filter, X, ChevronDown, FileText } from 'lucide-react';
 import { deleteEquipo, getEquipos } from '../services/api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const Inventario = ({ equipos, setEquipos }) => {
   const navigate = useNavigate();
@@ -18,27 +20,12 @@ const Inventario = ({ equipos, setEquipos }) => {
   // Obtener departamentos únicos de las ubicaciones
   const departamentos = ['todos', ...new Set(equipos.map(eq => eq.ubicacion).filter(Boolean))];
 
-  // Función para extraer departamento de la ubicación (si quieres buscar por palabra clave)
-  const buscarEnUbicacion = (ubicacion, termino) => {
-    if (!termino || termino === 'todos') return true;
-    return ubicacion.toLowerCase().includes(termino.toLowerCase());
-  };
-
   const equiposFiltrados = equipos.filter((eq) => {
-    // Filtro por TIPO (principal)
     const matchTipo = filtroTipo === 'todos' || eq.tipo === filtroTipo;
-    
-    // Filtro por USO
     const matchUso = filtroUso === 'todos' || eq.uso === filtroUso;
-    
-    // Filtro por ESTADO
     const matchEstado = filtroEstado === 'todos' || eq.estado === filtroEstado;
-    
-    // Filtro por DEPARTAMENTO/UBICACIÓN
     const matchDepartamento = filtroDepartamento === 'todos' || 
       eq.ubicacion.toLowerCase().includes(filtroDepartamento.toLowerCase());
-    
-    // Búsqueda general
     const matchSearch = !searchTerm ||
       eq.codigo_equipo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       eq.usuario_asignado.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -51,7 +38,6 @@ const Inventario = ({ equipos, setEquipos }) => {
     navigate(`/equipo/${id}`);
   };
 
-  // Contar equipos por tipo para mostrar badges
   const contarPorTipo = (tipo) => {
     return equipos.filter(eq => eq.tipo === tipo).length;
   };
@@ -102,6 +88,87 @@ const Inventario = ({ equipos, setEquipos }) => {
     };
     return tipos[tipo] || tipo;
   };
+
+  // ========== FUNCIÓN PARA PDF SIMPLE ==========
+  const generarPDF = () => {
+  if (equiposFiltrados.length === 0) {
+    alert('No hay equipos para exportar');
+    return;
+  }
+
+  try {
+    const doc = new jsPDF('landscape', 'mm', 'a4');
+    
+    // Título
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Inventario de Equipos', 14, 15);
+    
+    // Fecha
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Generado: ${new Date().toLocaleString()}`, 14, 25);
+    doc.text(`Total de equipos: ${equiposFiltrados.length}`, 14, 32);
+    
+    // Preparar datos SIN emojis
+    const headers = [['Código', 'Tipo', 'Usuario', 'Ubicación', 'Estado', 'Uso']];
+    const rows = equiposFiltrados.map(eq => {
+      // Limpiar tipo
+      let tipoLimpio = eq.tipo;
+      if (eq.tipo === 'computadora_escritorio') tipoLimpio = 'Computadora';
+      else if (eq.tipo === 'impresora') tipoLimpio = 'Impresora';
+      else if (eq.tipo === 'monitor') tipoLimpio = 'Monitor';
+      
+      // Limpiar estado
+      let estadoLimpio = eq.estado;
+      if (eq.estado === 'bueno') estadoLimpio = 'Óptimo';
+      else if (eq.estado === 'regular') estadoLimpio = 'Regular';
+      else if (eq.estado === 'malo') estadoLimpio = 'Dañado';
+      
+      // Limpiar uso
+      let usoLimpio = eq.uso;
+      if (eq.uso === 'critico') usoLimpio = 'Crítico';
+      else if (eq.uso === 'importante') usoLimpio = 'Importante';
+      else if (eq.uso === 'basico') usoLimpio = 'Básico';
+      
+      return [
+        eq.codigo_equipo,
+        tipoLimpio,
+        eq.usuario_asignado,
+        eq.ubicacion,
+        estadoLimpio,
+        usoLimpio
+      ];
+    });
+    
+    // Usar autoTable para una tabla bonita
+    autoTable(doc, {
+      startY: 40,
+      head: headers,
+      body: rows,
+      theme: 'striped',
+      headStyles: { 
+        fillColor: [30, 60, 114], 
+        textColor: [255, 255, 255], 
+        fontStyle: 'bold',
+        halign: 'center'
+      },
+      styles: { 
+        fontSize: 9, 
+        cellPadding: 3,
+        valign: 'middle'
+      },
+      alternateRowStyles: { fillColor: [240, 240, 240] },
+    });
+    
+    doc.save('inventario.pdf');
+    alert('✅ PDF descargado correctamente');
+    
+  } catch (error) {
+    console.error('Error:', error);
+    alert('❌ Error al generar PDF: ' + error.message);
+  }
+};
 
   return (
     <div>
@@ -298,6 +365,17 @@ const Inventario = ({ equipos, setEquipos }) => {
           )}
         </div>
       )}
+
+      {/* BOTÓN DE PDF - SOLO UNO PARA PROBAR */}
+      <div className="mb-4 flex justify-end">
+        <button
+          onClick={generarPDF}
+          className="px-4 py-2 bg-[#1e3c72] text-white rounded-lg hover:bg-[#2a5298] transition-colors flex items-center gap-2 text-sm"
+        >
+          <FileText size={16} />
+          Descargar PDF (Inventario)
+        </button>
+      </div>
 
       {/* Resultados y contadores */}
       <div className="flex justify-between items-center mb-4">
