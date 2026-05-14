@@ -1,27 +1,37 @@
-// FormularioImpresora.jsx - CON MANEJO DE ERROR DE CÓDIGO DUPLICADO
-import React, { useState } from 'react';
+// FormularioImpresora.jsx
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, RotateCcw, ArrowLeft, Upload, Camera, ChevronRight, ChevronLeft, AlertCircle, Star, Heart, Printer, AlertTriangle } from 'lucide-react';
-import { getEquipos } from '../services/api';
+import { Save, RotateCcw, ArrowLeft, ChevronRight, ChevronLeft, AlertCircle, Star, Heart, Printer, AlertTriangle } from 'lucide-react';
+import { getEquipos, createEquipo, getDepartamentos } from '../services/api';
+import ImageUpload from './ImageUpload';
 
 const FormularioImpresora = ({ equipos, setEquipos }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
-  const [photoPreview, setPhotoPreview] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
+  const [departamentosList, setDepartamentosList] = useState([]);
 
   const [formData, setFormData] = useState({
     codigo_equipo: '',
     marca: '',
     modelo: '',
     serial: '',
-    ubicacion: '',
+    piso: '',
+    departamento: '',
     uso: '',
     estado: '',
     observaciones: ''
   });
+
+  useEffect(() => {
+    const cargarDepartamentos = async () => {
+      const data = await getDepartamentos();
+      setDepartamentosList(data);
+    };
+    cargarDepartamentos();
+  }, []);
 
   const opcionesUso = [
     { id: 'critico', nombre: '🔴 EQUIPO CRÍTICO', descripcion: 'Impresión indispensable para operaciones diarias', color: 'red', bg: 'bg-red-50', border: 'border-red-400', icon: AlertCircle },
@@ -29,20 +39,11 @@ const FormularioImpresora = ({ equipos, setEquipos }) => {
     { id: 'basico', nombre: '🟢 EQUIPO BÁSICO', descripcion: 'Uso ocasional o respaldo', color: 'green', bg: 'bg-green-50', border: 'border-green-400', icon: Heart }
   ];
 
+  const pisos = ['Planta Baja', 'Mezanina', 'Piso 1', 'Piso 2', 'Piso 3', 'Piso 4', 'Piso 5'];
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    // Limpiar error cuando el usuario empieza a escribir
     if (errorMessage) setErrorMessage('');
-  };
-
-  const handlePhotoChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setPhotoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setPhotoPreview(reader.result);
-      reader.readAsDataURL(file);
-    }
   };
 
   const mostrarNotificacion = (mensaje, tipo, duracion = 3000) => {
@@ -70,7 +71,8 @@ const FormularioImpresora = ({ equipos, setEquipos }) => {
     formDataToSend.append('tipo', 'impresora');
     formDataToSend.append('uso', formData.uso);
     formDataToSend.append('usuario_asignado', formData.marca);
-    formDataToSend.append('ubicacion', formData.ubicacion);
+    formDataToSend.append('piso', formData.piso);
+    formDataToSend.append('departamento', formData.departamento);
     formDataToSend.append('procesador', `Marca: ${formData.marca} | Modelo: ${formData.modelo} | Serial: ${formData.serial}`);
     formDataToSend.append('ram', 'N/A');
     formDataToSend.append('disco_duro', 'N/A');
@@ -85,43 +87,23 @@ const FormularioImpresora = ({ equipos, setEquipos }) => {
       formDataToSend.append('foto', photoFile);
     }
     
-    try {
-      const response = await fetch('http://localhost:8000/api/equipos/', {
-        method: 'POST',
-        body: formDataToSend,
-      });
-      
-      const data = await response.json();
-      
-      if (response.ok) {
-        const nuevosEquipos = await getEquipos();
-        setEquipos(nuevosEquipos);
-        mostrarNotificacion('🖨️ ¡Impresora registrada exitosamente!', 'success');
-        setTimeout(() => navigate('/dashboard/inventario'), 1500);
+    const result = await createEquipo(formDataToSend);
+    
+    if (result.success) {
+      const nuevosEquipos = await getEquipos();
+      setEquipos(nuevosEquipos);
+      mostrarNotificacion('🖨️ ¡Impresora registrada exitosamente!', 'success');
+      setTimeout(() => navigate('/dashboard/inventario'), 1500);
+    } else {
+      const errorMsg = result.error || '';
+      if (errorMsg.includes('código') || errorMsg.includes('unique') || errorMsg.includes('Ya existe')) {
+        setErrorMessage(`El código "${formData.codigo_equipo}" ya está en uso. Por favor, usa un código diferente.`);
+        mostrarNotificacion(`❌ El código "${formData.codigo_equipo}" ya existe. Usa otro código.`, 'warning', 5000);
+        setStep(2);
       } else {
-        // Manejar diferentes tipos de errores
-        if (data.error === 'duplicate_code' || 
-            (data.message && data.message.includes('código')) ||
-            (data.codigo_equipo && data.codigo_equipo[0] === 'equipo with this codigo equipo already exists.')) {
-          
-          setErrorMessage(`El código "${formData.codigo_equipo}" ya está en uso. Por favor, usa un código diferente.`);
-          mostrarNotificacion(`❌ El código "${formData.codigo_equipo}" ya existe. Usa otro código.`, 'warning', 5000);
-          
-          // Volver al paso 2 para que el usuario corrija el código
-          setStep(2);
-          
-        } else if (data.message) {
-          setErrorMessage(data.message);
-          mostrarNotificacion(`❌ ${data.message}`, 'error');
-        } else {
-          setErrorMessage('Error al registrar la impresora. Verifica los datos, puede que este Código de quipo ya existe en la base de datos.');
-          mostrarNotificacion('❌ Error al registrar la impresora. Este Código de quipo ya existe.', 'error');
-        }
+        setErrorMessage(errorMsg || 'Error al registrar la impresora');
+        mostrarNotificacion(`❌ ${errorMsg || 'Error al registrar'}`, 'error');
       }
-    } catch (error) {
-      console.error('Error:', error);
-      setErrorMessage('Error de conexión con el servidor');
-      mostrarNotificacion('❌ Error de conexión', 'error');
     }
     
     setLoading(false);
@@ -133,19 +115,18 @@ const FormularioImpresora = ({ equipos, setEquipos }) => {
       marca: '',
       modelo: '',
       serial: '',
-      ubicacion: '',
+      piso: '',
+      departamento: '',
       uso: '',
       estado: '',
       observaciones: ''
     });
-    setPhotoPreview(null);
     setPhotoFile(null);
     setErrorMessage('');
     setStep(1);
   };
 
   const nextStep = () => {
-    // Validar campos obligatorios antes de avanzar
     if (step === 1 && !formData.uso) {
       mostrarNotificacion('⚠️ Por favor, selecciona una clasificación de uso', 'warning', 2000);
       return;
@@ -167,8 +148,12 @@ const FormularioImpresora = ({ equipos, setEquipos }) => {
         mostrarNotificacion('⚠️ El número de serial es obligatorio', 'warning', 2000);
         return;
       }
-      if (!formData.ubicacion) {
-        mostrarNotificacion('⚠️ La ubicación es obligatoria', 'warning', 2000);
+      if (!formData.piso) {
+        mostrarNotificacion('⚠️ El piso es obligatorio', 'warning', 2000);
+        return;
+      }
+      if (!formData.departamento) {
+        mostrarNotificacion('⚠️ El departamento es obligatorio', 'warning', 2000);
         return;
       }
       if (!formData.estado) {
@@ -193,7 +178,6 @@ const FormularioImpresora = ({ equipos, setEquipos }) => {
           <ArrowLeft size={18} /> Volver a seleccionar tipo
         </button>
 
-        {/* Progress Steps */}
         <div className="bg-white rounded-2xl shadow-xl mb-6 p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
@@ -223,7 +207,6 @@ const FormularioImpresora = ({ equipos, setEquipos }) => {
           </div>
         </div>
 
-        {/* Mostrar error general */}
         {errorMessage && (
           <div className="mb-4 p-4 bg-red-50 border border-red-400 rounded-xl flex items-start gap-3 animate-fadeIn">
             <AlertTriangle className="text-red-500 flex-shrink-0 mt-0.5" size={20} />
@@ -238,7 +221,6 @@ const FormularioImpresora = ({ equipos, setEquipos }) => {
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           <form onSubmit={handleSubmit}>
             <div className="p-8">
-              {/* PASO 1: CLASIFICACIÓN POR USO */}
               {step === 1 && (
                 <div className="animate-fadeIn">
                   <div className="text-center mb-8">
@@ -269,7 +251,6 @@ const FormularioImpresora = ({ equipos, setEquipos }) => {
                 </div>
               )}
 
-              {/* PASO 2: DATOS BÁSICOS */}
               {step === 2 && (
                 <div className="animate-fadeIn">
                   <h3 className="text-xl font-bold text-gray-800 mb-6">📋 Datos de la Impresora</h3>
@@ -323,12 +304,29 @@ const FormularioImpresora = ({ equipos, setEquipos }) => {
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Ubicación <span className="text-red-500">*</span>
+                        Piso <span className="text-red-500">*</span>
                       </label>
-                      <input type="text" name="ubicacion" value={formData.ubicacion} onChange={handleChange}
-                        placeholder="Ej: Recepción, Oficina 203, Sala de impresión"
+                      <select name="piso" value={formData.piso} onChange={handleChange}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        required />
+                        required>
+                        <option value="">Seleccione un piso</option>
+                        {pisos.map(piso => (
+                          <option key={piso} value={piso}>{piso}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Departamento <span className="text-red-500">*</span>
+                      </label>
+                      <select name="departamento" value={formData.departamento} onChange={handleChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        required>
+                        <option value="">Seleccione un departamento</option>
+                        {departamentosList.map(depto => (
+                          <option key={depto.id} value={depto.id}>{depto.nombre}</option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -347,40 +345,17 @@ const FormularioImpresora = ({ equipos, setEquipos }) => {
                 </div>
               )}
 
-              {/* PASO 3: FOTO DEL EQUIPO */}
               {step === 3 && (
                 <div className="animate-fadeIn">
                   <h3 className="text-xl font-bold text-gray-800 mb-6">📸 Foto de la Impresora</h3>
-                  <div className="flex justify-center">
-                    <div className="w-full max-w-md">
-                      <div className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all
-                        ${photoPreview ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-blue-400'}`}>
-                        {photoPreview ? (
-                          <div className="relative">
-                            <img src={photoPreview} alt="Preview" className="mx-auto max-h-64 rounded-lg shadow-lg" />
-                            <button type="button" onClick={() => { setPhotoPreview(null); setPhotoFile(null); }}
-                              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition">
-                              ✕
-                            </button>
-                            <p className="mt-3 text-sm text-green-600">✓ Foto cargada exitosamente</p>
-                          </div>
-                        ) : (
-                          <>
-                            <Camera size={64} className="mx-auto text-gray-400 mb-4" />
-                            <label className="cursor-pointer bg-gradient-to-r from-blue-500 to-green-500 text-white px-6 py-3 rounded-lg hover:shadow-lg inline-flex items-center gap-2 transition">
-                              <Upload size={18} /> Subir foto de la impresora
-                              <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
-                            </label>
-                            <p className="text-xs text-gray-500 mt-3">PNG, JPG o JPEG (máx. 5MB)</p>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  <ImageUpload
+                    onImageChange={setPhotoFile}
+                    tipo="equipo"
+                    label="Foto de la Impresora"
+                  />
                 </div>
               )}
 
-              {/* PASO 4: INFORMACIÓN ADICIONAL */}
               {step === 4 && (
                 <div className="animate-fadeIn">
                   <h3 className="text-xl font-bold text-gray-800 mb-6">📝 Información Adicional</h3>
@@ -398,7 +373,6 @@ const FormularioImpresora = ({ equipos, setEquipos }) => {
                 </div>
               )}
 
-              {/* Botones de navegación */}
               <div className="flex justify-between mt-8 pt-6 border-t">
                 {step > 1 && (
                   <button type="button" onClick={prevStep}

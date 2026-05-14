@@ -8,6 +8,8 @@ import FormularioImpresora from './components/FormularioImpresora';
 import FormularioMonitor from './components/FormularioMonitor';
 import DetalleEquipo from './components/DetalleEquipo';
 import PerfilUsuario from './components/PerfilUsuario';
+import RegistroAcciones from './components/RegistroAcciones';
+import GestionDepartamentos from './components/GestionDepartamentos';  // ← IMPORTAR
 import { getEquipos } from './services/api';
 
 function App() {
@@ -60,6 +62,8 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard/resumen" />} />
+        
+        {/* Dashboard con sus vistas */}
         <Route path="/dashboard/:vista" element={
           <Dashboard 
             equipos={equipos} 
@@ -68,13 +72,47 @@ function App() {
             onLogout={handleLogout}
           />
         } />
+        
+        {/* Rutas especiales que también usan el Dashboard */}
         <Route path="/dashboard/perfil" element={
-          <PerfilUsuario 
-            currentUser={currentUser} 
-            setCurrentUser={setCurrentUser}
+          <Dashboard 
+            equipos={equipos} 
+            setEquipos={setEquipos} 
+            currentUser={currentUser}
             onLogout={handleLogout}
-          />
+          >
+            <PerfilUsuario 
+              currentUser={currentUser} 
+              setCurrentUser={setCurrentUser}
+              onLogout={handleLogout}
+            />
+          </Dashboard>
         } />
+        
+        <Route path="/dashboard/acciones" element={
+          <Dashboard 
+            equipos={equipos} 
+            setEquipos={setEquipos} 
+            currentUser={currentUser}
+            onLogout={handleLogout}
+          >
+            <RegistroAcciones currentUser={currentUser} />
+          </Dashboard>
+        } />
+
+        {/* ← NUEVA RUTA PARA DEPARTAMENTOS */}
+        <Route path="/dashboard/departamentos" element={
+          <Dashboard 
+            equipos={equipos} 
+            setEquipos={setEquipos} 
+            currentUser={currentUser}
+            onLogout={handleLogout}
+          >
+            <GestionDepartamentos currentUser={currentUser} />
+          </Dashboard>
+        } />
+        
+        {/* Rutas fuera del Dashboard */}
         <Route path="/seleccionar-tipo" element={<SeleccionTipoEquipo />} />
         <Route path="/agregar/computadora" element={
           <FormularioComputadora equipos={equipos} setEquipos={setEquipos} />

@@ -1,27 +1,33 @@
+// Dashboard.jsx
 import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import Resumen from './Resumen';
 import Inventario from './Inventario';
-import AgregarEquipo from './AgregarEquipo';
 import Usuarios from './Usuarios';
 
-const Dashboard = ({ equipos, setEquipos, currentUser, onLogout }) => {
+const Dashboard = ({ equipos, setEquipos, currentUser, onLogout, children }) => {
   const { vista } = useParams();
-  const navigate = useNavigate();
 
   const getTitle = () => {
     const titles = {
       resumen: 'Resumen del Inventario',
       inventario: 'Inventario de Equipos',
       agregar: 'Agregar Nuevo Equipo',
-      usuarios: 'Gestión de Usuarios'
+      usuarios: 'Gestión de Usuarios',
+      perfil: 'Mi Perfil',
+      acciones: 'Registro de Acciones'
     };
     return titles[vista] || 'Resumen del Inventario';
   };
 
   const renderContent = () => {
+    // Si hay children (para rutas especiales como perfil y acciones)
+    if (children) {
+      return children;
+    }
+    
     switch (vista) {
       case 'resumen':
         return <Resumen equipos={equipos} />;
@@ -39,10 +45,7 @@ const Dashboard = ({ equipos, setEquipos, currentUser, onLogout }) => {
 
   return (
     <div className="flex h-screen">
-      <Sidebar 
-        currentUser={currentUser}
-        onLogout={onLogout}
-      />
+      <Sidebar currentUser={currentUser} onLogout={onLogout} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header title={getTitle()} onLogout={onLogout} />
         <main className="flex-1 overflow-y-auto p-6 bg-gray-100">

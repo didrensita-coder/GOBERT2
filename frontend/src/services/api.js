@@ -17,7 +17,6 @@ export const login = async (username, password) => {
     try {
         const response = await api.post('login/', { username, password });
         if (response.data.success) {
-            // ✅ Asegurar que la foto_perfil existe (aunque sea null)
             const userWithPhoto = {
                 ...response.data.user,
                 foto_perfil: response.data.user.foto_perfil || null
@@ -73,24 +72,56 @@ export const getStats = async () => {
     }
 };
 
+// ✅ FUNCIÓN CORREGIDA PARA createEquipo
 export const createEquipo = async (equipo) => {
     try {
-        const response = await axios.post('/api/equipos/', equipo, {
-            withCredentials: true,
-        });
+        // Si es FormData, usar fetch directamente (más confiable para archivos)
+        if (equipo instanceof FormData) {
+            const response = await fetch('/api/equipos/', {
+                method: 'POST',
+                body: equipo,
+                credentials: 'include',
+            });
+            
+            if (!response.ok) {
+                let errorMessage = 'Error al crear equipo';
+                try {
+                    const error = await response.json();
+                    errorMessage = error.message || error.detail || JSON.stringify(error);
+                    console.error('Error response:', error);
+                } catch (e) {
+                    errorMessage = `Error ${response.status}: ${response.statusText}`;
+                }
+                return { success: false, error: errorMessage };
+            }
+            
+            const data = await response.json();
+            return { success: true, data: data };
+        }
+        
+        // Si es JSON normal, usar axios
+        const response = await api.post('/equipos/', equipo);
         return { success: true, data: response.data };
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error en createEquipo:', error);
         return { success: false, error: error.message };
     }
 };
 
 export const updateEquipo = async (id, equipo) => {
     try {
-        const response = await api.put(`equipos/${id}/`, equipo);
+        const isFormData = equipo instanceof FormData;
+        const config = { withCredentials: true };
+        
+        if (!isFormData) {
+            config.headers = { 'Content-Type': 'application/json' };
+        }
+        
+        const response = await api.put(`equipos/${id}/`, equipo, config);
         return { success: true, data: response.data };
     } catch (error) {
-        return { success: false, error: error.message };
+        console.error('Error al actualizar:', error);
+        return { success: false, error: error.response?.data?.message || error.message };
     }
 };
 
@@ -105,9 +136,7 @@ export const deleteEquipo = async (id) => {
 
 export const exportarExcel = async () => {
     try {
-        const response = await api.get('equipos/exportar_excel/', {
-            responseType: 'blob'
-        });
+        const response = await api.get('equipos/exportar_excel/', { responseType: 'blob' });
         const url = window.URL.createObjectURL(new Blob([response.data]));
         const link = document.createElement('a');
         link.href = url;
@@ -123,9 +152,7 @@ export const exportarExcel = async () => {
 
 export const exportarCSV = async () => {
     try {
-        const response = await api.get('equipos/exportar_csv/', {
-            responseType: 'blob'
-        });
+        const response = await api.get('equipos/exportar_csv/', { responseType: 'blob' });
         const url = window.URL.createObjectURL(new Blob([response.data]));
         const link = document.createElement('a');
         link.href = url;
@@ -180,9 +207,7 @@ export const actualizarPerfil = async (formData) => {
     try {
         const response = await axios.put('/api/usuarios/actualizar_perfil/', formData, {
             withCredentials: true,
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            }
+            headers: { 'Content-Type': 'multipart/form-data' }
         });
         
         if (response.data.success) {
@@ -215,4 +240,59 @@ export const cambiarPassword = async (currentPassword, newPassword) => {
 
 export const updateCurrentUser = (user) => {
     localStorage.setItem('user', JSON.stringify(user));
+};
+
+export const getAcciones = async () => {
+    try {
+        const response = await api.get('acciones/');
+        return response.data;
+    } catch (error) {
+        console.error('Error al cargar acciones:', error);
+        return [];
+    }
+};
+
+
+// ============================================
+// DEPARTAMENTOS
+// ============================================
+
+export const getDepartamentos = async () => {
+    try {
+        const response = await api.get('departamentos/');
+        return response.data;
+    } catch (error) {
+        console.error('Error al cargar departamentos:', error);
+        return [];
+    }
+};
+
+export const crearDepartamento = async (data) => {
+    try {
+        const response = await api.post('departamentos/', data);
+        return { success: true, data: response.data };
+    } catch (error) {
+        console.error('Error:', error);
+        return { success: false, error: error.response?.data?.message || 'Error al crear' };
+    }
+};
+
+export const actualizarDepartamento = async (id, data) => {
+    try {
+        const response = await api.put(`departamentos/${id}/`, data);
+        return { success: true, data: response.data };
+    } catch (error) {
+        console.error('Error:', error);
+        return { success: false, error: error.response?.data?.message || 'Error al actualizar' };
+    }
+};
+
+export const eliminarDepartamento = async (id) => {
+    try {
+        await api.delete(`departamentos/${id}/`);
+        return { success: true };
+    } catch (error) {
+        console.error('Error:', error);
+        return { success: false, error: error.response?.data?.message || 'Error al eliminar' };
+    }
 };

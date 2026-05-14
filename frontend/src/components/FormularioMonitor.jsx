@@ -1,17 +1,18 @@
 // FormularioMonitor.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, RotateCcw, ArrowLeft, Upload, Camera, ChevronRight, ChevronLeft, AlertCircle, Star, Heart, AlertTriangle } from 'lucide-react';
-import { getEquipos } from '../services/api';
+import { Save, RotateCcw, ArrowLeft, ChevronRight, ChevronLeft, AlertCircle, Star, Heart, AlertTriangle } from 'lucide-react';
+import { getEquipos, createEquipo, getDepartamentos } from '../services/api';
+import ImageUpload from './ImageUpload';
 
 const FormularioMonitor = ({ equipos, setEquipos }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
-  const [photoPreview, setPhotoPreview] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [codigoError, setCodigoError] = useState('');
+  const [departamentosList, setDepartamentosList] = useState([]);
 
   const [formData, setFormData] = useState({
     codigo_equipo: '',
@@ -21,11 +22,20 @@ const FormularioMonitor = ({ equipos, setEquipos }) => {
     resolucion: '',
     tipo_pantalla: '',
     puertos: '',
-    ubicacion: '',
+    piso: '',
+    departamento: '',
     uso: '',
     estado: '',
     observaciones: ''
   });
+
+  useEffect(() => {
+    const cargarDepartamentos = async () => {
+      const data = await getDepartamentos();
+      setDepartamentosList(data);
+    };
+    cargarDepartamentos();
+  }, []);
 
   const opcionesUso = [
     { id: 'critico', nombre: '🔴 EQUIPO CRÍTICO', descripcion: 'Monitor indispensable para operaciones', color: 'red', bg: 'bg-red-50', border: 'border-red-400', icon: AlertCircle },
@@ -33,22 +43,14 @@ const FormularioMonitor = ({ equipos, setEquipos }) => {
     { id: 'basico', nombre: '🟢 EQUIPO BÁSICO', descripcion: 'Uso ocasional o secundario', color: 'green', bg: 'bg-green-50', border: 'border-green-400', icon: Heart }
   ];
 
+  const pisos = ['Planta Baja', 'Mezanina', 'Piso 1', 'Piso 2', 'Piso 3', 'Piso 4', 'Piso 5'];
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     if (e.target.name === 'codigo_equipo') {
       setCodigoError('');
     }
     if (errorMessage) setErrorMessage('');
-  };
-
-  const handlePhotoChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setPhotoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setPhotoPreview(reader.result);
-      reader.readAsDataURL(file);
-    }
   };
 
   const mostrarNotificacion = (mensaje, tipo, duracion = 3000) => {
@@ -77,7 +79,8 @@ const FormularioMonitor = ({ equipos, setEquipos }) => {
     formDataToSend.append('tipo', 'monitor');
     formDataToSend.append('uso', formData.uso);
     formDataToSend.append('usuario_asignado', formData.marca);
-    formDataToSend.append('ubicacion', formData.ubicacion);
+    formDataToSend.append('piso', formData.piso);
+    formDataToSend.append('departamento', formData.departamento);
     formDataToSend.append('marca', formData.marca);
     formDataToSend.append('modelo', formData.modelo);
     formDataToSend.append('tamano', formData.tamano);
@@ -95,38 +98,24 @@ const FormularioMonitor = ({ equipos, setEquipos }) => {
       formDataToSend.append('foto', photoFile);
     }
     
-    try {
-      const response = await fetch('http://localhost:8000/api/equipos/', {
-        method: 'POST',
-        body: formDataToSend,
-      });
-      
-      const data = await response.json();
-      
-      if (response.ok) {
-        const nuevosEquipos = await getEquipos();
-        setEquipos(nuevosEquipos);
-        mostrarNotificacion('🖥️ ¡Monitor registrado exitosamente!', 'success');
-        setTimeout(() => navigate('/dashboard/inventario'), 1500);
+    const result = await createEquipo(formDataToSend);
+    
+    if (result.success) {
+      const nuevosEquipos = await getEquipos();
+      setEquipos(nuevosEquipos);
+      mostrarNotificacion('🖥️ ¡Monitor registrado exitosamente!', 'success');
+      setTimeout(() => navigate('/dashboard/inventario'), 1500);
+    } else {
+      const errorMsg = result.error || '';
+      if (errorMsg.includes('código') || errorMsg.includes('unique') || errorMsg.includes('Ya existe')) {
+        setCodigoError(`El código "${formData.codigo_equipo}" ya está en uso. Por favor, usa un código diferente.`);
+        setErrorMessage(`El código "${formData.codigo_equipo}" ya existe. Usa otro código.`);
+        mostrarNotificacion(`❌ El código "${formData.codigo_equipo}" ya existe. Usa otro código.`, 'warning', 5000);
+        setStep(2);
       } else {
-        if (data.error === 'duplicate_code' || 
-            (data.message && data.message.includes('código'))) {
-          setCodigoError(`El código "${formData.codigo_equipo}" ya está en uso. Por favor, usa un código diferente.`);
-          setErrorMessage(`El código "${formData.codigo_equipo}" ya existe. Usa otro código.`);
-          mostrarNotificacion(`❌ El código "${formData.codigo_equipo}" ya existe. Usa otro código.`, 'warning', 5000);
-          setStep(2);
-        } else if (data.message) {
-          setErrorMessage(data.message);
-          mostrarNotificacion(`❌ ${data.message}`, 'error');
-        } else {
-          setErrorMessage('Error al registrar el monitor. Verifica los datos, puede que este Código de quipo ya existe en la base de datos.');
-          mostrarNotificacion('❌ Error al registrar el monitor. Este Código de quipo ya existe.', 'error');
-        }
+        setErrorMessage(errorMsg || 'Error al registrar el monitor');
+        mostrarNotificacion(`❌ ${errorMsg || 'Error al registrar'}`, 'error');
       }
-    } catch (error) {
-      console.error('Error:', error);
-      setErrorMessage('Error de conexión con el servidor');
-      mostrarNotificacion('❌ Error de conexión', 'error');
     }
     
     setLoading(false);
@@ -134,10 +123,19 @@ const FormularioMonitor = ({ equipos, setEquipos }) => {
 
   const handleReset = () => {
     setFormData({
-      codigo_equipo: '', marca: '', modelo: '', tamano: '', resolucion: '',
-      tipo_pantalla: '', puertos: '', ubicacion: '', uso: '', estado: '', observaciones: ''
+      codigo_equipo: '',
+      marca: '',
+      modelo: '',
+      tamano: '',
+      resolucion: '',
+      tipo_pantalla: '',
+      puertos: '',
+      piso: '',
+      departamento: '',
+      uso: '',
+      estado: '',
+      observaciones: ''
     });
-    setPhotoPreview(null);
     setPhotoFile(null);
     setErrorMessage('');
     setCodigoError('');
@@ -170,8 +168,12 @@ const FormularioMonitor = ({ equipos, setEquipos }) => {
         mostrarNotificacion('⚠️ La resolución es obligatoria', 'warning', 2000);
         return;
       }
-      if (!formData.ubicacion) {
-        mostrarNotificacion('⚠️ La ubicación es obligatoria', 'warning', 2000);
+      if (!formData.piso) {
+        mostrarNotificacion('⚠️ El piso es obligatorio', 'warning', 2000);
+        return;
+      }
+      if (!formData.departamento) {
+        mostrarNotificacion('⚠️ El departamento es obligatorio', 'warning', 2000);
         return;
       }
       if (!formData.estado) {
@@ -315,10 +317,24 @@ const FormularioMonitor = ({ equipos, setEquipos }) => {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Ubicación *</label>
-                      <input type="text" name="ubicacion" value={formData.ubicacion} onChange={handleChange}
-                        placeholder="Ej: Oficina 101"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Piso *</label>
+                      <select name="piso" value={formData.piso} onChange={handleChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                        <option value="">Seleccione un piso</option>
+                        {pisos.map(piso => (
+                          <option key={piso} value={piso}>{piso}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Departamento *</label>
+                      <select name="departamento" value={formData.departamento} onChange={handleChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                        <option value="">Seleccione un departamento</option>
+                        {departamentosList.map(depto => (
+                          <option key={depto.id} value={depto.id}>{depto.nombre}</option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Estado *</label>
@@ -335,25 +351,13 @@ const FormularioMonitor = ({ equipos, setEquipos }) => {
               )}
 
               {step === 3 && (
-                <div className="animate-fadeIn text-center">
+                <div className="animate-fadeIn">
                   <h3 className="text-xl font-bold mb-6">📸 Foto del Monitor</h3>
-                  <div className="border-2 border-dashed rounded-2xl p-8 max-w-md mx-auto">
-                    {photoPreview ? (
-                      <div className="relative">
-                        <img src={photoPreview} alt="Preview" className="max-h-64 mx-auto rounded-lg" />
-                        <button type="button" onClick={() => { setPhotoPreview(null); setPhotoFile(null); }}
-                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2">✕</button>
-                      </div>
-                    ) : (
-                      <>
-                        <Camera size={64} className="mx-auto text-gray-400 mb-4" />
-                        <label className="cursor-pointer bg-gradient-to-r from-blue-500 to-green-500 text-white px-6 py-3 rounded-lg inline-flex gap-2">
-                          <Upload size={18} /> Subir foto
-                          <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
-                        </label>
-                      </>
-                    )}
-                  </div>
+                  <ImageUpload
+                    onImageChange={setPhotoFile}
+                    tipo="equipo"
+                    label="Foto del Monitor"
+                  />
                 </div>
               )}
 
