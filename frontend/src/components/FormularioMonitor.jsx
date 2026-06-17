@@ -1,4 +1,3 @@
-// FormularioMonitor.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Save, RotateCcw, ArrowLeft, ChevronRight, ChevronLeft, AlertCircle, Star, Heart, AlertTriangle } from 'lucide-react';
@@ -37,17 +36,29 @@ const FormularioMonitor = ({ equipos, setEquipos }) => {
     cargarDepartamentos();
   }, []);
 
+  // Filtrar departamentos según el piso seleccionado
+  const departamentosFiltrados = formData.piso 
+    ? departamentosList.filter(depto => depto.piso === formData.piso)
+    : departamentosList;
+
   const opcionesUso = [
     { id: 'critico', nombre: '🔴 EQUIPO CRÍTICO', descripcion: 'Monitor indispensable para operaciones', color: 'red', bg: 'bg-red-50', border: 'border-red-400', icon: AlertCircle },
     { id: 'importante', nombre: '🟡 EQUIPO IMPORTANTE', descripcion: 'Uso frecuente diario', color: 'yellow', bg: 'bg-yellow-50', border: 'border-yellow-400', icon: Star },
     { id: 'basico', nombre: '🟢 EQUIPO BÁSICO', descripcion: 'Uso ocasional o secundario', color: 'green', bg: 'bg-green-50', border: 'border-green-400', icon: Heart }
   ];
 
-  const pisos = ['Planta Baja', 'Mezanina', 'Piso 1', 'Piso 2', 'Piso 3', 'Piso 4', 'Piso 5'];
+  const pisos = ['Planta Baja', 'Mezanina', 'Piso 1', 'Piso 2', 'Piso 3', 'Piso 4', 'Piso 5', 'Piso 6'];
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    if (e.target.name === 'codigo_equipo') {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Si cambia el piso, resetear el departamento seleccionado
+    if (name === 'piso') {
+      setFormData(prev => ({ ...prev, departamento: '' }));
+    }
+    
+    if (name === 'codigo_equipo') {
       setCodigoError('');
     }
     if (errorMessage) setErrorMessage('');
@@ -287,24 +298,28 @@ const FormularioMonitor = ({ equipos, setEquipos }) => {
                         </p>
                       )}
                     </div>
+
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Marca *</label>
                       <input type="text" name="marca" value={formData.marca} onChange={handleChange}
                         placeholder="Ej: Samsung, LG, Dell"
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
                     </div>
+
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Modelo *</label>
                       <input type="text" name="modelo" value={formData.modelo} onChange={handleChange}
                         placeholder="Ej: 24MK400H"
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
                     </div>
+
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Tamaño (pulgadas) *</label>
                       <input type="text" name="tamano" value={formData.tamano} onChange={handleChange}
                         placeholder="Ej: 24, 27, 32"
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
                     </div>
+
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Resolución *</label>
                       <select name="resolucion" value={formData.resolucion} onChange={handleChange}
@@ -316,6 +331,7 @@ const FormularioMonitor = ({ equipos, setEquipos }) => {
                         <option value="4K (3840x2160)">4K (3840x2160)</option>
                       </select>
                     </div>
+
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Piso *</label>
                       <select name="piso" value={formData.piso} onChange={handleChange}
@@ -326,16 +342,27 @@ const FormularioMonitor = ({ equipos, setEquipos }) => {
                         ))}
                       </select>
                     </div>
+
                     <div className="md:col-span-2">
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Departamento *</label>
-                      <select name="departamento" value={formData.departamento} onChange={handleChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                      <select 
+                        name="departamento" 
+                        value={formData.departamento} 
+                        onChange={handleChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg" required
+                      >
                         <option value="">Seleccione un departamento</option>
-                        {departamentosList.map(depto => (
+                        {departamentosFiltrados.map(depto => (
                           <option key={depto.id} value={depto.id}>{depto.nombre}</option>
                         ))}
                       </select>
+                      {formData.piso && departamentosFiltrados.length === 0 && (
+                        <p className="text-xs text-yellow-500 mt-1">
+                          ⚠️ No hay departamentos registrados en este piso. Crea uno en "Gestión de Departamentos".
+                        </p>
+                      )}
                     </div>
+
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Estado *</label>
                       <select name="estado" value={formData.estado} onChange={handleChange}

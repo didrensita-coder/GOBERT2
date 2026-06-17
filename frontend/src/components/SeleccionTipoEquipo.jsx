@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Monitor, Printer, Cpu, ArrowLeft, TrendingUp, CheckCircle } from 'lucide-react';
+import { Monitor, Printer, Cpu, ArrowLeft, TrendingUp, CheckCircle, Zap } from 'lucide-react'; // ← Agregar Zap
 
 const SeleccionTipoEquipo = () => {
   const navigate = useNavigate();
@@ -41,6 +41,18 @@ const SeleccionTipoEquipo = () => {
       bgColor: 'bg-purple-50',
       borderColor: 'hover:border-purple-500',
       caracteristicas: ['Marca', 'Modelo', 'Tamaño', 'Resolución']
+    },
+    {  // ← NUEVO REGULADOR
+      id: 'regulador',
+      nombre: 'Regulador / Protector',
+      descripcion: 'Registra protectores de voltaje y reguladores',
+      precio: 'Datos de identificación',
+      icono: <Zap size={48} />,
+      imagen: '⚡',
+      color: 'from-yellow-500 to-orange-600',
+      bgColor: 'bg-yellow-50',
+      borderColor: 'hover:border-yellow-500',
+      caracteristicas: ['Marca', 'Modelo', 'Serial', 'Usuario Asignado']
     }
   ];
 
@@ -67,8 +79,8 @@ const SeleccionTipoEquipo = () => {
         <p className="text-gray-500">Elige la categoría del equipo que deseas registrar</p>
       </div>
 
-      {/* Tarjetas estilo producto */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Tarjetas estilo producto - 4 columnas en desktop */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {tiposEquipo.map((tipo) => (
           <div
             key={tipo.id}

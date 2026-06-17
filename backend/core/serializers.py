@@ -1,7 +1,6 @@
-# core/serializers.py
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import Usuario, Equipo
+from .models import Usuario, Equipo, Accion, Departamento
 
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
@@ -44,8 +43,29 @@ class LoginSerializer(serializers.Serializer):
         return data
 
 
+class DepartamentoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Departamento
+        fields = '__all__'
+
+
 class EquipoSerializer(serializers.ModelSerializer):
+    departamento_nombre = serializers.CharField(source='departamento.nombre', read_only=True)
+    departamento_piso = serializers.CharField(source='departamento.piso', read_only=True)
+    # 👇 AGREGAR ESTO 👇
+    registrado_por_nombre = serializers.CharField(source='registrado_por.username', read_only=True, default='Administrador')
+    registrado_por_nombre_completo = serializers.CharField(source='registrado_por.get_full_name', read_only=True, default='Administrador')
+    
     class Meta:
         model = Equipo
         fields = '__all__'
         read_only_fields = ['id', 'fecha_registro']
+
+
+class AccionSerializer(serializers.ModelSerializer):
+    usuario_nombre = serializers.CharField(source='usuario.username', read_only=True)
+    
+    class Meta:
+        model = Accion
+        fields = ['id', 'usuario', 'usuario_nombre', 'tipo', 'entidad', 
+                  'entidad_id', 'descripcion', 'ip', 'fecha']

@@ -6,10 +6,11 @@ import SeleccionTipoEquipo from './components/SeleccionTipoEquipo';
 import FormularioComputadora from './components/FormularioComputadora';
 import FormularioImpresora from './components/FormularioImpresora';
 import FormularioMonitor from './components/FormularioMonitor';
+import FormularioRegulador from './components/FormularioRegulador';
 import DetalleEquipo from './components/DetalleEquipo';
 import PerfilUsuario from './components/PerfilUsuario';
 import RegistroAcciones from './components/RegistroAcciones';
-import GestionDepartamentos from './components/GestionDepartamentos';  // ← IMPORTAR
+import GestionDepartamentos from './components/GestionDepartamentos';
 import { getEquipos } from './services/api';
 
 function App() {
@@ -100,7 +101,6 @@ function App() {
           </Dashboard>
         } />
 
-        {/* ← NUEVA RUTA PARA DEPARTAMENTOS */}
         <Route path="/dashboard/departamentos" element={
           <Dashboard 
             equipos={equipos} 
@@ -122,6 +122,9 @@ function App() {
         } />
         <Route path="/agregar/monitor" element={
           <FormularioMonitor equipos={equipos} setEquipos={setEquipos} />
+        } />
+        <Route path="/agregar/regulador" element={
+          <FormularioRegulador equipos={equipos} setEquipos={setEquipos} />
         } />
         <Route path="/equipo/:id" element={
           <DetalleEquipo equipos={equipos} setEquipos={setEquipos} />

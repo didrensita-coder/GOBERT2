@@ -1,26 +1,57 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Save, X, Building, AlertCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, Building, AlertCircle, Search } from 'lucide-react';
 import { getDepartamentos, crearDepartamento, actualizarDepartamento, eliminarDepartamento } from '../services/api';
 
 const GestionDepartamentos = ({ currentUser }) => {
     const [departamentos, setDepartamentos] = useState([]);
+    const [departamentosFiltrados, setDepartamentosFiltrados] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editando, setEditando] = useState(null);
     const [formData, setFormData] = useState({ nombre: '', piso: '' });
     const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
+    const [terminoBusqueda, setTerminoBusqueda] = useState('');
+    const [filtroPiso, setFiltroPiso] = useState('');
 
-    const pisos = ['Planta Baja', 'Mezanina', 'Piso 1', 'Piso 2', 'Piso 3', 'Piso 4', 'Piso 5'];
+    const pisos = ['Planta Baja', 'Mezanina', 'Piso 1', 'Piso 2', 'Piso 3', 'Piso 4', 'Piso 5', 'Piso 6'];
 
     useEffect(() => {
         cargarDepartamentos();
     }, []);
 
+    useEffect(() => {
+        filtrarDepartamentos();
+    }, [terminoBusqueda, filtroPiso, departamentos]);
+
     const cargarDepartamentos = async () => {
         setLoading(true);
         const data = await getDepartamentos();
         setDepartamentos(data);
+        setDepartamentosFiltrados(data);
         setLoading(false);
+    };
+
+    const filtrarDepartamentos = () => {
+        let filtrados = [...departamentos];
+
+        // Filtrar por término de búsqueda (nombre)
+        if (terminoBusqueda.trim()) {
+            filtrados = filtrados.filter(depto =>
+                depto.nombre.toLowerCase().includes(terminoBusqueda.toLowerCase())
+            );
+        }
+
+        // Filtrar por piso
+        if (filtroPiso) {
+            filtrados = filtrados.filter(depto => depto.piso === filtroPiso);
+        }
+
+        setDepartamentosFiltrados(filtrados);
+    };
+
+    const limpiarFiltros = () => {
+        setTerminoBusqueda('');
+        setFiltroPiso('');
     };
 
     const mostrarNotificacion = (texto, tipo) => {
@@ -112,13 +143,63 @@ const GestionDepartamentos = ({ currentUser }) => {
                 </div>
             )}
 
+            {/* Barra de búsqueda y filtros */}
+            <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+                <div className="flex flex-col md:flex-row gap-4">
+                    {/* Búsqueda por nombre */}
+                    <div className="flex-1 relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Buscar por nombre del departamento..."
+                            value={terminoBusqueda}
+                            onChange={(e) => setTerminoBusqueda(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+
+                    {/* Filtro por piso */}
+                    <div className="md:w-64">
+                        <select
+                            value={filtroPiso}
+                            onChange={(e) => setFiltroPiso(e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">Todos los pisos</option>
+                            {pisos.map(piso => (
+                                <option key={piso} value={piso}>{piso}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Botón limpiar filtros */}
+                    {(terminoBusqueda || filtroPiso) && (
+                        <button
+                            onClick={limpiarFiltros}
+                            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+                        >
+                            Limpiar filtros
+                        </button>
+                    )}
+                </div>
+
+                {/* Resultado de la búsqueda */}
+                {!loading && (
+                    <div className="mt-2 text-sm text-gray-500">
+                        Mostrando {departamentosFiltrados.length} de {departamentos.length} departamentos
+                    </div>
+                )}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {departamentos.length === 0 ? (
+                {departamentosFiltrados.length === 0 ? (
                     <div className="col-span-full text-center py-12 text-gray-500">
-                        No hay departamentos registrados. Crea el primero.
+                        {terminoBusqueda || filtroPiso 
+                            ? 'No se encontraron departamentos con los filtros seleccionados.'
+                            : 'No hay departamentos registrados. Crea el primero.'}
                     </div>
                 ) : (
-                    departamentos.map((depto) => (
+                    departamentosFiltrados.map((depto) => (
                         <div key={depto.id} className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition">
                             <div className="flex justify-between items-start">
                                 <div className="flex items-start gap-3">

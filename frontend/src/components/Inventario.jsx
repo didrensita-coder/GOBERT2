@@ -19,7 +19,7 @@ const Inventario = ({ equipos, setEquipos }) => {
   
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
 
-  const pisos = ['todos', 'Planta Baja', 'Mezanina', 'Piso 1', 'Piso 2', 'Piso 3', 'Piso 4', 'Piso 5'];
+  const pisos = ['todos', 'Planta Baja', 'Mezanina', 'Piso 1', 'Piso 2', 'Piso 3', 'Piso 4', 'Piso 5', 'Piso 6'];
 
   const departamentosList = ['todos', ...new Set(equipos.map(eq => eq.departamento_nombre || eq.departamento?.nombre).filter(Boolean))];
 
@@ -115,6 +115,7 @@ const Inventario = ({ equipos, setEquipos }) => {
       'computadora_escritorio': '💻 Computadora',
       'impresora': '🖨️ Impresora',
       'monitor': '🖥️ Monitor',
+      'regulador': '⚡ Regulador',
     };
     return tipos[tipo] || tipo;
   };
@@ -168,6 +169,7 @@ const Inventario = ({ equipos, setEquipos }) => {
         if (eq.tipo === 'computadora_escritorio') tipoLimpio = 'Computadora';
         else if (eq.tipo === 'impresora') tipoLimpio = 'Impresora';
         else if (eq.tipo === 'monitor') tipoLimpio = 'Monitor';
+        else if (eq.tipo === 'regulador') tipoLimpio = 'Regulador';
         
         let estadoLimpio = eq.estado;
         if (eq.estado === 'bueno') estadoLimpio = 'Óptimo';
@@ -224,6 +226,15 @@ const Inventario = ({ equipos, setEquipos }) => {
     }
   };
 
+  // Tipos disponibles para el filtro
+  const tiposFiltro = [
+    { id: 'todos', label: 'Todos', count: equipos.length },
+    { id: 'computadora_escritorio', label: '💻 Computadoras', count: contarPorTipo('computadora_escritorio') },
+    { id: 'impresora', label: '🖨️ Impresoras', count: contarPorTipo('impresora') },
+    { id: 'monitor', label: '🖥️ Monitores', count: contarPorTipo('monitor') },
+    { id: 'regulador', label: '⚡ Reguladores', count: contarPorTipo('regulador') },
+  ];
+
   return (
     <div>
       {/* Barra de búsqueda */}
@@ -274,12 +285,7 @@ const Inventario = ({ equipos, setEquipos }) => {
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-2">📦 Tipo de Equipo</label>
               <div className="flex flex-wrap gap-2">
-                {[
-                  { id: 'todos', label: 'Todos', count: equipos.length },
-                  { id: 'computadora_escritorio', label: '💻 Computadoras', count: contarPorTipo('computadora_escritorio') },
-                  { id: 'impresora', label: '🖨️ Impresoras', count: contarPorTipo('impresora') },
-                  { id: 'monitor', label: '🖥️ Monitores', count: contarPorTipo('monitor') },
-                ].map((btn) => (
+                {tiposFiltro.map((btn) => (
                   <button
                     key={btn.id}
                     onClick={() => setFiltroTipo(btn.id)}

@@ -27,7 +27,7 @@ const ModalEditar = ({ equipo, onClose, setEquipos }) => {
   const [departamentosList, setDepartamentosList] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const pisos = ['Planta Baja', 'Mezanina', 'Piso 1', 'Piso 2', 'Piso 3', 'Piso 4', 'Piso 5'];
+  const pisos = ['Planta Baja', 'Mezanina', 'Piso 1', 'Piso 2', 'Piso 3', 'Piso 4', 'Piso 5', 'Piso 6' ];
 
   useEffect(() => {
     cargarDepartamentos();

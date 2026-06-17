@@ -1,4 +1,3 @@
-// FormularioComputadora.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Save, RotateCcw, ArrowLeft, ChevronRight, ChevronLeft, AlertCircle, Star, Heart, AlertTriangle } from 'lucide-react';
@@ -37,17 +36,29 @@ const FormularioComputadora = ({ equipos, setEquipos }) => {
     cargarDepartamentos();
   }, []);
 
+  // Filtrar departamentos según el piso seleccionado
+  const departamentosFiltrados = formData.piso 
+    ? departamentosList.filter(depto => depto.piso === formData.piso)
+    : departamentosList;
+
   const opcionesUso = [
     { id: 'critico', nombre: '🔴 EQUIPO CRÍTICO', descripcion: 'Indispensable para operaciones diarias. No puede fallar.', color: 'red', bg: 'bg-red-50', border: 'border-red-400', icon: AlertCircle },
     { id: 'importante', nombre: '🟡 EQUIPO IMPORTANTE', descripcion: 'Utilizado frecuentemente. Requiere mantenimiento regular.', color: 'yellow', bg: 'bg-yellow-50', border: 'border-yellow-400', icon: Star },
     { id: 'basico', nombre: '🟢 EQUIPO BÁSICO', descripcion: 'Uso ocasional o de respaldo. No crítico.', color: 'green', bg: 'bg-green-50', border: 'border-green-400', icon: Heart }
   ];
 
-  const pisos = ['Planta Baja', 'Mezanina', 'Piso 1', 'Piso 2', 'Piso 3', 'Piso 4', 'Piso 5'];
+  const pisos = ['Planta Baja', 'Mezanina', 'Piso 1', 'Piso 2', 'Piso 3', 'Piso 4', 'Piso 5', 'Piso 6'];
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    if (e.target.name === 'codigo_equipo') {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Si cambia el piso, resetear el departamento seleccionado
+    if (name === 'piso') {
+      setFormData(prev => ({ ...prev, departamento: '' }));
+    }
+    
+    if (name === 'codigo_equipo') {
       setCodigoError('');
     }
     if (errorMessage) setErrorMessage('');
@@ -223,7 +234,6 @@ const FormularioComputadora = ({ equipos, setEquipos }) => {
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           <form onSubmit={handleSubmit}>
             <div className="p-8">
-              {/* PASO 1: CLASIFICACIÓN */}
               {step === 1 && (
                 <div className="animate-fadeIn">
                   <div className="text-center mb-8">
@@ -253,7 +263,6 @@ const FormularioComputadora = ({ equipos, setEquipos }) => {
                 </div>
               )}
 
-              {/* PASO 2: DATOS BÁSICOS */}
               {step === 2 && (
                 <div className="animate-fadeIn">
                   <h3 className="text-xl font-bold text-gray-800 mb-6">📋 Datos Básicos</h3>
@@ -278,6 +287,7 @@ const FormularioComputadora = ({ equipos, setEquipos }) => {
                         </p>
                       )}
                     </div>
+
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
                         Usuario Asignado <span className="text-red-500">*</span>
@@ -287,6 +297,7 @@ const FormularioComputadora = ({ equipos, setEquipos }) => {
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         required />
                     </div>
+
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
                         Piso <span className="text-red-500">*</span>
@@ -300,21 +311,32 @@ const FormularioComputadora = ({ equipos, setEquipos }) => {
                         ))}
                       </select>
                     </div>
+
                     <div className="md:col-span-2">
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
                         Departamento <span className="text-red-500">*</span>
                       </label>
-                      <select name="departamento" value={formData.departamento} onChange={handleChange}
+                      <select 
+                        name="departamento" 
+                        value={formData.departamento} 
+                        onChange={handleChange}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        required>
+                        required
+                      >
                         <option value="">Seleccione un departamento</option>
-                        {departamentosList.map(depto => (
+                        {departamentosFiltrados.map(depto => (
                           <option key={depto.id} value={depto.id}>
-                            {depto.nombre} {depto.piso && `(${depto.piso})`}
+                            {depto.nombre}
                           </option>
                         ))}
                       </select>
+                      {formData.piso && departamentosFiltrados.length === 0 && (
+                        <p className="text-xs text-yellow-500 mt-1">
+                          ⚠️ No hay departamentos registrados en este piso. Crea uno en "Gestión de Departamentos".
+                        </p>
+                      )}
                     </div>
+
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
                         Estado <span className="text-red-500">*</span>
@@ -332,7 +354,6 @@ const FormularioComputadora = ({ equipos, setEquipos }) => {
                 </div>
               )}
 
-              {/* PASO 3: FOTO */}
               {step === 3 && (
                 <div className="animate-fadeIn">
                   <h3 className="text-xl font-bold text-gray-800 mb-6">📸 Foto del Equipo</h3>
@@ -344,7 +365,6 @@ const FormularioComputadora = ({ equipos, setEquipos }) => {
                 </div>
               )}
 
-              {/* PASO 4: ESPECIFICACIONES */}
               {step === 4 && (
                 <div className="animate-fadeIn">
                   <h3 className="text-xl font-bold text-gray-800 mb-6">⚙️ Especificaciones Técnicas</h3>

@@ -8,13 +8,36 @@ from rest_framework.decorators import action
 from rest_framework.views import APIView
 from django.contrib.auth import login, logout
 from django.http import HttpResponse
-from .models import Usuario, Equipo
+from .models import Usuario, Equipo, Accion, Departamento
 from .serializers import (
     UsuarioSerializer, RegistroUsuarioSerializer, 
-    LoginSerializer, EquipoSerializer
+    LoginSerializer, EquipoSerializer, AccionSerializer, DepartamentoSerializer
 )
 import csv
-from io import BytesIO
+
+# ============================================
+# FUNCIÓN PARA REGISTRAR ACCIONES
+# ============================================
+
+def registrar_accion(usuario, tipo, entidad, entidad_id, descripcion, request=None):
+    """Función auxiliar para registrar acciones"""
+    ip = None
+    if request:
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+    
+    Accion.objects.create(
+        usuario=usuario,
+        tipo=tipo,
+        entidad=entidad,
+        entidad_id=entidad_id,
+        descripcion=descripcion,
+        ip=ip
+    )
+
 
 # ============================================
 # PERMISOS PERSONALIZADOS
@@ -24,15 +47,6 @@ class IsAdminUser(permissions.BasePermission):
     """Permiso solo para administradores"""
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.rol == 'admin'
-
-class IsAdminOrReadOnly(permissions.BasePermission):
-    """Admin: todo | Coordinador: solo lectura"""
-    def has_permission(self, request, view):
-        if not request.user.is_authenticated:
-            return False
-        if request.method in permissions.SAFE_METHODS:
-            return True
-        return request.user.rol == 'admin'
 
 
 # ============================================
@@ -53,11 +67,12 @@ class LoginView(APIView):
             login(request, user)
             print(f"✅ Login exitoso: {user.username}")
             
-            # Usar el serializer para los datos del usuario
+            # Registrar acción
+            registrar_accion(user, 'login', 'perfil', user.id, "Inicio de sesión", request)
+            
             user_serializer = UsuarioSerializer(user)
             user_data = user_serializer.data
             
-            # Agregar la URL completa de la foto
             if user.foto_perfil:
                 user_data['foto_perfil'] = request.build_absolute_uri(user.foto_perfil.url)
             else:
@@ -74,6 +89,8 @@ class LoginView(APIView):
 @method_decorator(csrf_exempt, name='dispatch')
 class LogoutView(APIView):
     def post(self, request):
+        if request.user.is_authenticated:
+            registrar_accion(request.user, 'logout', 'perfil', request.user.id, "Cierre de sesión", request)
         logout(request)
         return Response({'success': True})
 
@@ -119,9 +136,18 @@ class UserViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             user = serializer.save()
             print(f"✅ Coordinador creado: {user.username}")
+            
+            registrar_accion(request.user, 'creacion', 'usuario', user.id, f"Creó el usuario {user.username}", request)
+            
             return Response(UsuarioSerializer(user).data, status=status.HTTP_201_CREATED)
         print(f"❌ Error: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def destroy(self, request, *args, **kwargs):
+        user = self.get_object()
+        username = user.username
+        registrar_accion(request.user, 'eliminacion', 'usuario', user.id, f"Eliminó el usuario {username}", request)
+        return super().destroy(request, *args, **kwargs)
     
     @action(detail=False, methods=['get'])
     def me(self, request):
@@ -137,7 +163,6 @@ class UserViewSet(viewsets.ModelViewSet):
         """Actualizar el perfil del usuario autenticado"""
         user = request.user
         
-        # Actualizar campos básicos
         if 'first_name' in request.data:
             user.first_name = request.data['first_name']
         if 'last_name' in request.data:
@@ -149,18 +174,17 @@ class UserViewSet(viewsets.ModelViewSet):
         if 'departamento' in request.data:
             user.departamento = request.data['departamento']
         if 'foto_perfil' in request.FILES:
-            # Eliminar foto anterior si existe
             if user.foto_perfil:
                 user.foto_perfil.delete()
             user.foto_perfil = request.FILES['foto_perfil']
         
         user.save()
         
-        # Usar el serializer para devolver los datos consistentemente
+        registrar_accion(request.user, 'edicion', 'perfil', user.id, "Actualizó su perfil", request)
+        
         serializer = UsuarioSerializer(user)
         user_data = serializer.data
         
-        # Agregar la URL completa de la foto
         if user.foto_perfil:
             user_data['foto_perfil'] = request.build_absolute_uri(user.foto_perfil.url)
         else:
@@ -193,6 +217,8 @@ class UserViewSet(viewsets.ModelViewSet):
         user.set_password(new_password)
         user.save()
         
+        registrar_accion(request.user, 'edicion', 'perfil', user.id, "Cambió su contraseña", request)
+        
         return Response({'success': True, 'message': 'Contraseña actualizada correctamente'})
 
 
@@ -211,7 +237,22 @@ class EquipoViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         user = self.request.user if self.request.user.is_authenticated else None
-        serializer.save(registrado_por=user)
+        equipo = serializer.save(registrado_por=user)
+        if user:
+            registrar_accion(user, 'creacion', 'equipo', equipo.id, f"Creó el equipo {equipo.codigo_equipo}", self.request)
+    
+    def perform_update(self, serializer):
+        equipo = serializer.save()
+        user = self.request.user if self.request.user.is_authenticated else None
+        if user:
+            registrar_accion(user, 'edicion', 'equipo', equipo.id, f"Editó el equipo {equipo.codigo_equipo}", self.request)
+    
+    def perform_destroy(self, instance):
+        user = self.request.user if self.request.user.is_authenticated else None
+        codigo = instance.codigo_equipo
+        if user:
+            registrar_accion(user, 'eliminacion', 'equipo', instance.id, f"Eliminó el equipo {codigo}", self.request)
+        instance.delete()
     
     @action(detail=False, methods=['get'])
     def stats(self, request):
@@ -228,7 +269,6 @@ class EquipoViewSet(viewsets.ModelViewSet):
         for equipo in equipos:
             tipo = equipo.get_tipo_display()
             stats['por_tipo'][tipo] = stats['por_tipo'].get(tipo, 0) + 1
-            
             ubicacion = equipo.ubicacion
             stats['por_ubicacion'][ubicacion] = stats['por_ubicacion'].get(ubicacion, 0) + 1
         
@@ -305,3 +345,67 @@ class EquipoViewSet(viewsets.ModelViewSet):
             ])
         
         return response
+
+
+# ============================================
+# VISTAS DE ACCIONES
+# ============================================
+
+class AccionViewSet(viewsets.ModelViewSet):
+    queryset = Accion.objects.all()
+    serializer_class = AccionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        if self.request.user.rol == 'admin':
+            return Accion.objects.all()
+        return Accion.objects.filter(usuario=self.request.user)
+
+
+# ============================================
+# VISTAS DE DEPARTAMENTOS (NUEVO)
+# ============================================
+
+class DepartamentoViewSet(viewsets.ModelViewSet):
+    queryset = Departamento.objects.all()
+    serializer_class = DepartamentoSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        # Solo administradores pueden crear, editar o eliminar
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAdminUser()]
+        return [permissions.IsAuthenticated()]
+    
+    def perform_create(self, serializer):
+        depto = serializer.save()
+        registrar_accion(
+            self.request.user, 
+            'creacion', 
+            'departamento', 
+            depto.id, 
+            f"Creó el departamento {depto.nombre}", 
+            self.request
+        )
+    
+    def perform_update(self, serializer):
+        depto = serializer.save()
+        registrar_accion(
+            self.request.user, 
+            'edicion', 
+            'departamento', 
+            depto.id, 
+            f"Editó el departamento {depto.nombre}", 
+            self.request
+        )
+    
+    def perform_destroy(self, instance):
+        registrar_accion(
+            self.request.user, 
+            'eliminacion', 
+            'departamento', 
+            instance.id, 
+            f"Eliminó el departamento {instance.nombre}", 
+            self.request
+        )
+        instance.delete()

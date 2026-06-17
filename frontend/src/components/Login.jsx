@@ -12,7 +12,6 @@ const Login = ({ onLogin }) => {
     setError('');
     setLoading(true);
 
-    // Verificar contra la base de datos
     const result = await login(user, pass);
     
     if (result.success) {
@@ -25,11 +24,15 @@ const Login = ({ onLogin }) => {
   };
 
   return (
-    <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-[#1e3c72] to-[#2a5298]">
+    <div 
+      className="h-full w-full flex items-center justify-center bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: "url('/loginfondo2.jfif')" }}
+    >
+      {/* Cuadro blanco 100% opaco - sin transparencia */}
       <div className="bg-white rounded-xl p-10 w-full max-w-md shadow-2xl">
         <div className="text-center mb-8">
           <img src="/avatar8.png" alt="Logo Inventario" className="w-40 h-40 mx-auto mb-3 object-contain" />
-          <div className="text-3xl font-bold text-[#1e3c72] mb-2">Sistema Gobert</div>
+          <div className="text-3xl font-bold text-[#1e3c72] mb-2">Sistema Gob</div>
           <div className="text-sm text-gray-500">Sistema de inventario de equipos computacionales.</div>
         </div>
         
@@ -46,7 +49,7 @@ const Login = ({ onLogin }) => {
               type="text"
               value={user}
               onChange={(e) => setUser(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#2a5298] transition-colors"
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#2a5298] transition-colors bg-white"
               placeholder="Ingrese su usuario"
               required
               disabled={loading}
@@ -58,7 +61,7 @@ const Login = ({ onLogin }) => {
               type="password"
               value={pass}
               onChange={(e) => setPass(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#2a5298] transition-colors"
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#2a5298] transition-colors bg-white"
               placeholder="Ingrese su contraseña"
               required
               disabled={loading}
@@ -74,7 +77,6 @@ const Login = ({ onLogin }) => {
         </form>
         
         <div className="mt-4 text-center text-xs text-gray-400">
-          
         </div>
       </div>
     </div>

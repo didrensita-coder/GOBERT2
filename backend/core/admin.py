@@ -1,6 +1,7 @@
+# core/admin.py
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Usuario, Equipo
+from .models import Usuario, Equipo, Departamento
 
 class CustomUserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name', 'rol', 'is_active')
@@ -20,17 +21,55 @@ class CustomUserAdmin(UserAdmin):
     )
 
 
+@admin.register(Departamento)
+class DepartamentoAdmin(admin.ModelAdmin):
+    list_display = ['nombre', 'piso', 'activo', 'fecha_creacion']
+    list_filter = ['piso', 'activo']
+    search_fields = ['nombre']
+    ordering = ['piso', 'nombre']
+
+
 @admin.register(Equipo)
 class EquipoAdmin(admin.ModelAdmin):
-    list_display = ['codigo_equipo', 'tipo', 'ubicacion', 'usuario_asignado', 'estado']
-    list_filter = ['estado', 'tipo', 'ubicacion']
-    search_fields = ['codigo_equipo', 'usuario_asignado', 'ubicacion']
+    list_display = ['codigo_equipo', 'tipo', 'usuario_asignado', 'get_departamento', 'get_piso', 'estado', 'uso', 'fecha_registro']
+    list_filter = ['estado', 'tipo', 'uso', 'piso']
+    search_fields = ['codigo_equipo', 'usuario_asignado', 'departamento__nombre']
     readonly_fields = ['fecha_registro']
     
-    def save_model(self, request, obj, form, change):
-        if not change:
-            obj.registrado_por = request.user
-        super().save_model(request, obj, form, change)
+    def get_departamento(self, obj):
+        return obj.departamento.nombre if obj.departamento else '-'
+    get_departamento.short_description = 'Departamento'
+    
+    def get_piso(self, obj):
+        return obj.piso or '-'
+    get_piso.short_description = 'Piso'
+    
+    fieldsets = (
+        ('Información General', {
+            'fields': ('codigo_equipo', 'tipo', 'uso')
+        }),
+        ('Ubicación', {
+            'fields': ('piso', 'departamento')
+        }),
+        ('Asignación', {
+            'fields': ('usuario_asignado',)
+        }),
+        ('Especificaciones Técnicas', {
+            'fields': ('procesador', 'ram', 'disco_duro', 'sistema_operativo'),
+            'classes': ('collapse',)
+        }),
+        ('Datos Específicos', {
+            'fields': ('marca', 'modelo', 'serial', 'tamano', 'resolucion', 'tipo_pantalla', 'puertos'),
+            'classes': ('collapse',)
+        }),
+        ('Estado y Observaciones', {
+            'fields': ('estado', 'observaciones', 'foto')
+        }),
+        ('Metadatos', {
+            'fields': ('fecha_registro', 'registrado_por'),
+            'classes': ('collapse',)
+        }),
+    )
 
 
 admin.site.register(Usuario, CustomUserAdmin)

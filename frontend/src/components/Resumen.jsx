@@ -15,6 +15,7 @@ const Resumen = ({ equipos }) => {
     laptops: 0,
     impresoras: 0,
     monitores: 0,
+    reguladores: 0,
     servidores: 0,
     otros: 0,
   });
@@ -37,6 +38,7 @@ const Resumen = ({ equipos }) => {
       laptops: equipos.filter(eq => eq.tipo === 'laptop').length,
       impresoras: equipos.filter(eq => eq.tipo === 'impresora').length,
       monitores: equipos.filter(eq => eq.tipo === 'monitor').length,
+      reguladores: equipos.filter(eq => eq.tipo === 'regulador').length,
       servidores: equipos.filter(eq => eq.tipo === 'servidor').length,
       otros: equipos.filter(eq => eq.tipo === 'otro' || eq.tipo === 'tablet' || eq.tipo === 'telefono').length,
     };
@@ -46,7 +48,7 @@ const Resumen = ({ equipos }) => {
     const equiposOrdenados = [...equipos].sort((a, b) => {
       const fechaA = new Date(a.fecha_registro);
       const fechaB = new Date(b.fecha_registro);
-      return fechaB - fechaA; // Más reciente primero
+      return fechaB - fechaA;
     });
     
     const ultimos5 = equiposOrdenados.slice(0, 5);
@@ -78,6 +80,7 @@ const Resumen = ({ equipos }) => {
       laptop: '💻',
       impresora: '🖨️',
       monitor: '🖥️',
+      regulador: '⚡',
       servidor: '🗄️',
     };
     return iconos[tipo] || '📦';
@@ -89,9 +92,17 @@ const Resumen = ({ equipos }) => {
       laptop: 'Laptop',
       impresora: 'Impresora',
       monitor: 'Monitor',
+      regulador: 'Regulador',
       servidor: 'Servidor',
     };
     return nombres[tipo] || tipo;
+  };
+
+  // Obtener ubicación formateada (Piso y Departamento)
+  const getUbicacionTexto = (eq) => {
+    const pisoTexto = eq.piso || 'Sin piso';
+    const deptoTexto = eq.departamento_nombre || eq.departamento?.nombre || 'Sin departamento';
+    return `${pisoTexto} - ${deptoTexto}`;
   };
 
   return (
@@ -132,7 +143,7 @@ const Resumen = ({ equipos }) => {
 
       {/* Tarjetas de TIPO DE EQUIPO */}
       <h3 className="text-lg font-semibold text-gray-700 mb-3">🖱️ Equipos por Tipo</h3>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
         <div className="bg-white p-4 rounded-xl shadow-md text-center hover:shadow-lg transition-shadow">
           <div className="text-3xl mb-2">🖥️</div>
           <div className="text-2xl font-bold text-[#1e3c72]">{stats.computadoras}</div>
@@ -147,6 +158,11 @@ const Resumen = ({ equipos }) => {
           <div className="text-3xl mb-2">🖥️</div>
           <div className="text-2xl font-bold text-[#1e3c72]">{stats.monitores}</div>
           <div className="text-xs text-gray-500">Monitores</div>
+        </div>
+        <div className="bg-white p-4 rounded-xl shadow-md text-center hover:shadow-lg transition-shadow">
+          <div className="text-3xl mb-2">⚡</div>
+          <div className="text-2xl font-bold text-[#1e3c72]">{stats.reguladores}</div>
+          <div className="text-xs text-gray-500">Reguladores</div>
         </div>
       </div>
 
@@ -180,9 +196,11 @@ const Resumen = ({ equipos }) => {
                         <span className="flex items-center gap-1">
                           {getTipoIcono(eq.tipo)} {getNombreTipo(eq.tipo)}
                         </span>
-                       </td>
+                      </td>
                       <td className="px-4 py-3 text-sm">{eq.usuario_asignado}</td>
-                      <td className="px-4 py-3 text-sm">{eq.ubicacion}</td>
+                      <td className="px-4 py-3 text-sm">
+                        {getUbicacionTexto(eq)}
+                      </td>
                       <td className="px-4 py-3 text-sm">{getEstadoBadge(eq.estado)}</td>
                       <td className="px-4 py-3 text-sm">{getUsoBadge(eq.uso)}</td>
                       <td className="px-4 py-3 text-sm text-gray-500">
